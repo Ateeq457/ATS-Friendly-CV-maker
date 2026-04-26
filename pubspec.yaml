@@ -1,0 +1,51 @@
+name: android_cv_maker
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.2
+
+  # Storage
+  shared_preferences: ^2.3.0
+
+  # PDF & Printing (UPDATED)
+  printing: ^5.13.1
+
+  # WebView (UPDATED)
+  webview_flutter: ^4.9.0
+
+  # File System Paths
+  path_provider: ^2.1.5
+
+  # Share Files / PDF (UPDATED)
+  share_plus: ^8.0.2
+
+  # Image Picker (UPDATED STABLE)
+  image_picker: ^1.1.2
+
+  html: ^0.15.4
+  pdf: ^3.10.7
+  zoom_widget: ^2.0.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  # assets:
+  #   - assets/templates/
+  #   - assets/templates/usa_classic/
+  #   - assets/templates/usa_classic/config.json
+  #   - assets/templates/usa_classic/template.html
+  #   - assets/templates/usa_classic/style.css
