@@ -1,11 +1,11 @@
-import 'package:android_cv_maker/presentation/screens/template_preview_screen.dart';
-import 'package:android_cv_maker/presentation/screens/create_cv_screen.dart'; // ✅ Add this import
+import 'package:android_cv_maker/core/config/template_config.dart';
+import 'package:android_cv_maker/presentation/screens/create_cv_screen.dart';
+import 'package:android_cv_maker/presentation/screens/preview_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/constants/design_system.dart';
-import '../../data/models/template_model.dart';
-import '../viewmodels/all_templates_viewmodel.dart';
+import '../../core/templates/template_generator.dart';
 import '../widgets/home/template_card.dart';
+import '../../models/cv_data.dart';
 
 class AllTemplatesScreen extends StatefulWidget {
   const AllTemplatesScreen({super.key});
@@ -18,10 +18,61 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
+  List<TemplateConfig> _templates = [];
+  List<TemplateConfig> _filteredTemplates = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+  String? _errorMessage;
+
+  // Sample CV data for preview
+  final CVData _sampleCVData = CVData.sample();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplates();
+  }
+
   void _dismissKeyboard() {
     if (_searchFocusNode.hasFocus) {
       _searchFocusNode.unfocus();
     }
+  }
+
+  void _loadTemplates() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final templates = TemplateGenerator.getAllTemplates();
+      setState(() {
+        _templates = templates;
+        _filteredTemplates = templates;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _filterTemplates(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.isEmpty) {
+        _filteredTemplates = _templates;
+      } else {
+        _filteredTemplates = _templates
+            .where(
+              (t) => t.layoutStyle.toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
+      }
+    });
   }
 
   @override
@@ -33,24 +84,17 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AllTemplatesViewModel(),
-      child: GestureDetector(
-        onTap: _dismissKeyboard,
-        child: Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: _buildAppBar(context),
-          body: Consumer<AllTemplatesViewModel>(
-            builder: (context, viewModel, child) {
-              return Column(
-                children: [
-                  _buildSearchBar(context, viewModel),
-                  const SizedBox(height: 16),
-                  Expanded(child: _buildContent(context, viewModel)),
-                ],
-              );
-            },
-          ),
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: _buildAppBar(context),
+        body: Column(
+          children: [
+            _buildSearchBar(),
+            const SizedBox(height: 16),
+            Expanded(child: _buildContent()),
+          ],
         ),
       ),
     );
@@ -73,10 +117,7 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
     );
   }
 
-  Widget _buildSearchBar(
-    BuildContext context,
-    AllTemplatesViewModel viewModel,
-  ) {
+  Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: DesignSystem.paddingLarge,
@@ -92,18 +133,16 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
           focusNode: _searchFocusNode,
           textInputAction: TextInputAction.done,
           onEditingComplete: _dismissKeyboard,
-          onChanged: (value) {
-            viewModel.setSearchQuery(value);
-          },
+          onChanged: _filterTemplates,
           decoration: InputDecoration(
             hintText: 'Search templates...',
             prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
-            suffixIcon: _searchController.text.isNotEmpty
+            suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
                     icon: Icon(Icons.clear, color: Colors.grey[500]),
                     onPressed: () {
                       _searchController.clear();
-                      viewModel.clearSearch();
+                      _filterTemplates('');
                     },
                   )
                 : null,
@@ -115,25 +154,22 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, AllTemplatesViewModel viewModel) {
-    if (viewModel.isLoading) {
+  Widget _buildContent() {
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (viewModel.errorMessage.isNotEmpty) {
+    if (_errorMessage != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              viewModel.errorMessage,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            Text(_errorMessage!, style: TextStyle(color: Colors.grey[600])),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => viewModel.loadTemplates(),
+              onPressed: _loadTemplates,
               child: const Text('Retry'),
             ),
           ],
@@ -141,7 +177,7 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
       );
     }
 
-    if (viewModel.templates.isEmpty) {
+    if (_filteredTemplates.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -149,8 +185,8 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
             Icon(Icons.grid_view_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              _searchController.text.isNotEmpty
-                  ? 'No templates match "${_searchController.text}"'
+              _searchQuery.isNotEmpty
+                  ? 'No templates match "$_searchQuery"'
                   : 'No templates found',
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
@@ -167,13 +203,13 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
         mainAxisSpacing: 12,
         childAspectRatio: 0.80,
       ),
-      itemCount: viewModel.templates.length,
+      itemCount: _filteredTemplates.length,
       itemBuilder: (context, index) {
-        final template = viewModel.templates[index];
+        final template = _filteredTemplates[index];
         return TemplateCard(
           template: template,
-          onTap: () => _navigateToCreateCV(context, template), // ✅ Updated
-          onPreviewTap: () => _previewTemplate(context, template),
+          onTap: () => _navigateToCreateCV(context, index),
+          onPreviewTap: () => _previewTemplate(context, index),
         );
       },
     );
@@ -205,22 +241,20 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
     );
   }
 
-  void _previewTemplate(BuildContext context, TemplateModel template) {
+  void _previewTemplate(BuildContext context, int templateIndex) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TemplatePreviewScreen(template: template),
+        builder: (context) =>
+            PreviewScreen(cvData: _sampleCVData, templateIndex: templateIndex),
       ),
     );
   }
 
-  // ✅ Updated: Navigate to CreateCVScreen with template
-  void _navigateToCreateCV(BuildContext context, TemplateModel template) {
+  void _navigateToCreateCV(BuildContext context, int templateIndex) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => CreateCVScreen(template: template),
-      ),
+      MaterialPageRoute(builder: (context) => CreateCVScreen()),
     );
   }
 }

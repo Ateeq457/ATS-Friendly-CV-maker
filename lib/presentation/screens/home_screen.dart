@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/constants/design_system.dart';
-import '../../data/models/cv_model.dart';
-import '../../data/models/template_model.dart';
+
+
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/hero_section.dart';
 import '../widgets/home/template_carousel.dart';

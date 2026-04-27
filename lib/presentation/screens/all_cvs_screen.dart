@@ -1,6 +1,7 @@
+import 'package:android_cv_maker/data/models/cv_model.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/design_system.dart';
-import '../../data/models/cv_model.dart';
+
 import '../widgets/shared/animated_card.dart';
 import '../widgets/shared/bottom_sheet_item.dart';
 

@@ -1,26 +1,20 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/cv_data_model.dart';
+import '../models/cv_data.dart';
 
 class CVStorage {
-  static const String _key = 'cv_data';
+  static const String _cvKey = 'cv_data';
 
-  Future<void> saveCVData(CVDataModel cvData) async {
+  Future<void> saveCVData(CVData cvData) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(cvData.toJson());
-    await prefs.setString(_key, jsonString);
+    await prefs.setString(_cvKey, jsonString);
   }
 
-  Future<CVDataModel?> loadCVData() async {
+  Future<CVData?> loadCVData(String? id) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_key);
+    final jsonString = prefs.getString(_cvKey);
     if (jsonString == null) return null;
-    final Map<String, dynamic> json = jsonDecode(jsonString);
-    return CVDataModel.fromJson(json);
-  }
-
-  Future<void> clearCVData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_key);
+    return CVData.fromJson(jsonDecode(jsonString));
   }
 }
