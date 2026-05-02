@@ -1,3 +1,4 @@
+// File: lib/presentation/screens/all_templates_screen.dart
 import 'package:android_cv_maker/core/config/template_config.dart';
 import 'package:android_cv_maker/presentation/screens/create_cv_screen.dart';
 import 'package:android_cv_maker/presentation/screens/preview_screen.dart';
@@ -5,7 +6,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/design_system.dart';
 import '../../core/templates/template_generator.dart';
 import '../widgets/home/template_card.dart';
-import '../../models/cv_data.dart';
+import '../../data/models/cv_data.dart'; // ✅ CHANGED
+import '../../data/models/template_model.dart'; // ✅ ADDED
 
 class AllTemplatesScreen extends StatefulWidget {
   const AllTemplatesScreen({super.key});
@@ -206,8 +208,18 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
       itemCount: _filteredTemplates.length,
       itemBuilder: (context, index) {
         final template = _filteredTemplates[index];
+        // Create a TemplateModel wrapper for the card
+        final templateModel = TemplateModel(
+          id: index.toString(),
+          name: template.layoutStyle,
+          tag: template.layoutStyle,
+          icon: Icons.description,
+          color: Color(
+            int.parse('0xFF${template.primaryColor.replaceAll('#', '')}'),
+          ),
+        );
         return TemplateCard(
-          template: template,
+          template: templateModel,
           onTap: () => _navigateToCreateCV(context, index),
           onPreviewTap: () => _previewTemplate(context, index),
         );
@@ -252,9 +264,13 @@ class _AllTemplatesScreenState extends State<AllTemplatesScreen> {
   }
 
   void _navigateToCreateCV(BuildContext context, int templateIndex) {
+    // Store selected template index (you can use a provider or pass via constructor)
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CreateCVScreen()),
+      MaterialPageRoute(
+        builder: (context) =>
+            CreateCVScreen(selectedTemplateIndex: templateIndex),
+      ),
     );
   }
 }

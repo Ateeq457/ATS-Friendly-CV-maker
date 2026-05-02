@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/custom_section_model.dart';
+import '../../../data/models/cv_data.dart';
 
 class CustomSectionsForm extends StatefulWidget {
   final List<CustomSectionModel> sections;

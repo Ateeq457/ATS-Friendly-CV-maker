@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{fullName}} - Executive Resume</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Merriweather', Georgia, serif;
+            background-color: #f0f4f8;
+            padding: 50px;
+            line-height: 1.6;
+        }
+        
+        .resume-container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+            border-left: 5px solid #10B981;
+        }
+        
+        /* Header Section */
+        .header {
+            padding: 40px 40px 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .name {
+            font-size: 36px;
+            font-weight: bold;
+            color: #1a202c;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .title {
+            font-size: 18px;
+            color: #10B981;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        
+        .contact-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 10px;
+        }
+        
+        /* Content Section */
+        .content {
+            padding: 30px 40px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #10B981;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+        
+        /* Experience Styles */
+        .experience-item {
+            margin-bottom: 25px;
+        }
+        
+        .experience-header {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        
+        .job-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a202c;
+        }
+        
+        .company {
+            font-size: 14px;
+            color: #10B981;
+            font-style: italic;
+        }
+        
+        .date {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .description {
+            font-size: 14px;
+            color: #4a5568;
+            margin-top: 8px;
+        }
+        
+        /* Skills */
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .skill-tag {
+            background: #ecfdf5;
+            color: #10B981;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+                zoom: 100% !important;
+            }
+            .resume-container {
+                box-shadow: none;
+                border-radius: 0;
+                margin: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+            /* Ensure proper page breaks */
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <div class="header">
+            <div class="name">{{fullName}}</div>
+            <div class="title">{{title}}</div>
+            <div class="contact-bar">
+                <span>📧 {{email}}</span>
+                <span>📞 {{phone}}</span>
+                <span>📍 {{location}}</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <div class="section-title">Executive Summary</div>
+                <div class="description">{{summary}}</div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Professional Experience</div>
+                {{#each experiences}}
+                <div class="experience-item">
+                    <div class="experience-header">
+                        <div>
+                            <span class="job-title">{{jobTitle}}</span>
+                            <span class="company"> at {{company}}</span>
+                        </div>
+                        <div class="date">{{startDate}} - {{#if isCurrent}}Present{{else}}{{endDate}}{{/if}}</div>
+                    </div>
+                    <div class="description">{{description}}</div>
+                </div>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Education</div>
+                {{#each educations}}
+                <div class="experience-item">
+                    <div class="job-title">{{degree}}</div>
+                    <div class="company">{{institution}}</div>
+                    <div class="date">{{startDate}} - {{#if endDate}}{{endDate}}{{else}}Present{{/if}}</div>
+                    {{#if gpa}}<div class="description">GPA: {{gpa}}</div>{{/if}}
+                </div>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Core Competencies</div>
+                <div class="skills-list">
+                    {{#each skills}}
+                    <span class="skill-tag">{{this}}</span>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 12px 30px; background: #10B981; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            🖨️ Save as PDF
+        </button>
+    </div>
+</body>
+</html>

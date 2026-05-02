@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{fullName}} - Resume</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 40px;
+            line-height: 1.6;
+        }
+        
+        .resume-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #1E88E5;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .name {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .title {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+        
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+        
+        .contact-info span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1E88E5;
+            border-bottom: 2px solid #1E88E5;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-text {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .experience-item {
+            margin-bottom: 20px;
+        }
+        
+        .experience-header {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        
+        .job-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .company {
+            font-size: 14px;
+            color: #1E88E5;
+            font-weight: 500;
+        }
+        
+        .date {
+            font-size: 13px;
+            color: #6B7280;
+        }
+        
+        .experience-description {
+            font-size: 14px;
+            color: #4B5563;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        
+        .education-item {
+            margin-bottom: 15px;
+        }
+        
+        .degree {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .institution {
+            font-size: 14px;
+            color: #1E88E5;
+        }
+        
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .skill-tag {
+            background: #E3F2FD;
+            color: #1E88E5;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .language-item {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin: 0 10px 10px 0;
+            font-size: 13px;
+        }
+        
+        .certification-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            border-left: 3px solid #1E88E5;
+        }
+        
+        .cert-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .cert-issuer {
+            font-size: 12px;
+            color: #6B7280;
+        }
+        
+        .project-item {
+            margin-bottom: 15px;
+        }
+        
+        .project-name {
+            font-size: 15px;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        /* Add to existing styles */
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+                zoom: 100% !important;
+            }
+            .resume-container {
+                box-shadow: none;
+                border-radius: 0;
+                margin: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+            /* Ensure proper page breaks */
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* For mobile preview - fixed width container */
+        .resume-container {
+            width: 900px;  /* Fixed width for preview */
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        /* For better PDF */
+        @media print and (max-width: 900px) {
+            .resume-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <div class="header">
+            <div class="name">{{fullName}}</div>
+            <div class="title">{{title}}</div>
+            <div class="contact-info">
+                <span>📧 {{email}}</span>
+                <span>📞 {{phone}}</span>
+                <span>📍 {{location}}</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">Professional Summary</h2>
+                <div class="summary-text">{{summary}}</div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Work Experience</h2>
+                {{#each experiences}}
+                <div class="experience-item">
+                    <div class="experience-header">
+                        <div>
+                            <span class="job-title">{{jobTitle}}</span>
+                            <span class="company"> at {{company}}</span>
+                        </div>
+                        <div class="date">
+                            {{startDate}} - {{#if isCurrent}}Present{{else}}{{endDate}}{{/if}}
+                        </div>
+                    </div>
+                    <div class="experience-description">{{description}}</div>
+                </div>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Education</h2>
+                {{#each educations}}
+                <div class="education-item">
+                    <div class="degree">{{degree}}</div>
+                    <div class="institution">{{institution}}</div>
+                    <div class="date">{{startDate}} - {{#if endDate}}{{endDate}}{{else}}Present{{/if}}</div>
+                    {{#if gpa}}<div class="date">GPA: {{gpa}}</div>{{/if}}
+                </div>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Skills</h2>
+                <div class="skills-list">
+                    {{#each skills}}
+                    <span class="skill-tag">{{this}}</span>
+                    {{/each}}
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Languages</h2>
+                {{#each languages}}
+                <span class="language-item">{{name}} - {{proficiencyLevel}}</span>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Certifications</h2>
+                {{#each certifications}}
+                <div class="certification-item">
+                    <div class="cert-name">{{name}}</div>
+                    <div class="cert-issuer">{{issuer}}</div>
+                </div>
+                {{/each}}
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Projects</h2>
+                {{#each projects}}
+                <div class="project-item">
+                    <div class="project-name">{{name}}</div>
+                    <div class="experience-description">{{description}}</div>
+                    {{#if technologies}}<div class="skills-list" style="margin-top: 8px;">
+                        <span class="skill-tag">{{technologies}}</span>
+                    </div>{{/if}}
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+    
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 12px 30px; background: #1E88E5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+            🖨️ Save as PDF
+        </button>
+    </div>
+</body>
+</html>

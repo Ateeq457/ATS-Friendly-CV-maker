@@ -1,3 +1,5 @@
+// File: lib/presentation/screens/home_screen.dart
+import 'package:android_cv_maker/data/models/cv_data.dart';
 import 'package:android_cv_maker/presentation/screens/all_cvs_screen.dart';
 import 'package:android_cv_maker/presentation/screens/all_templates_screen.dart';
 import 'package:android_cv_maker/presentation/screens/create_cv_screen.dart';
@@ -6,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/constants/design_system.dart';
-
+import '../../data/models/template_model.dart'; // ✅ ADDE
 
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/hero_section.dart';
@@ -56,6 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ========== FIRST TIME USER VIEW ==========
   Widget _buildFirstTimeUserView(BuildContext context) {
+    final popularTemplates = TemplateModel.getPopularTemplates();
+    final benefits = TemplateModel.getBenefits();
+    final quickSteps = TemplateModel.getQuickSteps();
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -64,16 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
           HeroSection(onCreateCV: () => _navigateToCreateCV(context)),
           const SizedBox(height: DesignSystem.paddingXLarge),
           TemplateCarousel(
-            templates: TemplateModel.getPopularTemplates(),
+            templates: popularTemplates,
             onTemplateTap: (template) =>
                 _navigateToTemplateDetail(context, template),
             onPreviewTap: (template) => _previewTemplate(context, template),
             onSeeAll: () => _navigateToAllTemplates(context),
           ),
           const SizedBox(height: DesignSystem.paddingXXLarge),
-          const QuickStartSteps(),
-          const SizedBox(height: DesignSystem.paddingXLarge),
-          const BenefitsSection(),
+
           const SizedBox(height: DesignSystem.paddingXXLarge),
           SampleCVPreview(onViewSample: () => _showSampleCV(context)),
           const SizedBox(height: DesignSystem.paddingXLarge),
@@ -86,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildReturningUserView(BuildContext context, List<CVModel> userCVs) {
     final drafts = userCVs.where((cv) => cv.status == 'draft').toList();
     final recentCVs = userCVs.take(3).toList();
+    final recommendedTemplates = TemplateModel.getRecommendedTemplates();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -125,11 +130,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           RecommendedTemplatesCarousel(
-            templates: TemplateModel.getRecommendedTemplates(),
+            templates: recommendedTemplates,
             onTemplateTap: (template) =>
                 _navigateToTemplateDetail(context, template),
-            onPreviewTap: (template) =>
-                _previewTemplate(context, template), // ✅ Add this line
+            onPreviewTap: (template) => _previewTemplate(context, template),
           ),
           const SizedBox(height: 16),
         ],
@@ -268,7 +272,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToCreateCV(BuildContext context) {
-    // Open create CV screen without template (user will select later)
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateCVScreen()),
@@ -289,12 +292,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToTemplateDetail(BuildContext context, TemplateModel template) {
-    // Open create CV screen with pre-selected template
+    // ✅ FIXED: Don't pass template parameter
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Creating CV with ${template.name} template...'),
+        backgroundColor: Colors.green,
+      ),
+    );
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => CreateCVScreen(template: template),
-      ),
+      MaterialPageRoute(builder: (context) => const CreateCVScreen()),
     );
   }
 

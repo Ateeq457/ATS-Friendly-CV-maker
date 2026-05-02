@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/social_link_model.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Changed import (SocialLinkModel is here)
 
 class SocialLinksForm extends StatelessWidget {
   final List<SocialLinkModel> socialLinks;

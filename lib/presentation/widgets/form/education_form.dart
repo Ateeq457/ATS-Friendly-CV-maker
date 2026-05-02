@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/education_model.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Import from cv_data
 
 class EducationForm extends StatelessWidget {
-  final List<EducationModel> educations;
+  final List<Education> educations; // ✅ Changed from EducationModel
   final VoidCallback onAddEducation;
-  final Function(int, EducationModel) onUpdateEducation;
+  final Function(int, Education) onUpdateEducation; // ✅ Changed
   final Function(int) onRemoveEducation;
 
   const EducationForm({
@@ -83,7 +83,7 @@ class EducationForm extends StatelessWidget {
   Widget _buildEducationCard(
     BuildContext context,
     int index,
-    EducationModel education,
+    Education education,
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -125,14 +125,12 @@ class EducationForm extends StatelessWidget {
                       TextPosition(offset: education.degree.length),
                     ),
                   onChanged: (value) {
-                    final updated = EducationModel(
-                      id: education.id,
+                    final updated = Education(
                       degree: value,
                       institution: education.institution,
                       startDate: education.startDate,
                       endDate: education.endDate,
-                      isCurrent: education.isCurrent,
-                      grade: education.grade,
+                      gpa: education.gpa,
                     );
                     onUpdateEducation(index, updated);
                   },
@@ -149,35 +147,30 @@ class EducationForm extends StatelessWidget {
                       TextPosition(offset: education.institution.length),
                     ),
                   onChanged: (value) {
-                    final updated = EducationModel(
-                      id: education.id,
+                    final updated = Education(
                       degree: education.degree,
                       institution: value,
                       startDate: education.startDate,
                       endDate: education.endDate,
-                      isCurrent: education.isCurrent,
-                      grade: education.grade,
+                      gpa: education.gpa,
                     );
                     onUpdateEducation(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
-                // ✅ Date fields with labels above
                 _buildDateSection(context, education, index),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Checkbox(
-                      value: education.isCurrent,
+                      value: education.endDate == null,
                       onChanged: (value) {
-                        final updated = EducationModel(
-                          id: education.id,
+                        final updated = Education(
                           degree: education.degree,
                           institution: education.institution,
                           startDate: education.startDate,
-                          endDate: null,
-                          isCurrent: value ?? false,
-                          grade: education.grade,
+                          endDate: value == true ? null : DateTime.now(),
+                          gpa: education.gpa,
                         );
                         onUpdateEducation(index, updated);
                       },
@@ -192,19 +185,17 @@ class EducationForm extends StatelessWidget {
                     hintText: '3.8 / 4.0, A+, First Class...',
                     prefixIcon: Icon(Icons.star),
                   ),
-                  controller: TextEditingController(text: education.grade ?? '')
+                  controller: TextEditingController(text: education.gpa ?? '')
                     ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: (education.grade ?? '').length),
+                      TextPosition(offset: (education.gpa ?? '').length),
                     ),
                   onChanged: (value) {
-                    final updated = EducationModel(
-                      id: education.id,
+                    final updated = Education(
                       degree: education.degree,
                       institution: education.institution,
                       startDate: education.startDate,
                       endDate: education.endDate,
-                      isCurrent: education.isCurrent,
-                      grade: value.isEmpty ? null : value,
+                      gpa: value.isEmpty ? null : value,
                     );
                     onUpdateEducation(index, updated);
                   },
@@ -217,16 +208,17 @@ class EducationForm extends StatelessWidget {
     );
   }
 
-  // ✅ New method for date section with labels above
   Widget _buildDateSection(
     BuildContext context,
-    EducationModel education,
+    Education education,
     int index,
   ) {
+    final isCurrent = education.endDate == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!education.isCurrent)
+        if (!isCurrent)
           Row(
             children: [
               Expanded(
@@ -246,14 +238,12 @@ class EducationForm extends StatelessWidget {
                       context,
                       initialDate: education.startDate,
                       onSelected: (date) {
-                        final updated = EducationModel(
-                          id: education.id,
+                        final updated = Education(
                           degree: education.degree,
                           institution: education.institution,
                           startDate: date,
                           endDate: education.endDate,
-                          isCurrent: education.isCurrent,
-                          grade: education.grade,
+                          gpa: education.gpa,
                         );
                         onUpdateEducation(index, updated);
                       },
@@ -279,14 +269,12 @@ class EducationForm extends StatelessWidget {
                       context,
                       initialDate: education.endDate ?? DateTime.now(),
                       onSelected: (date) {
-                        final updated = EducationModel(
-                          id: education.id,
+                        final updated = Education(
                           degree: education.degree,
                           institution: education.institution,
                           startDate: education.startDate,
                           endDate: date,
-                          isCurrent: false,
-                          grade: education.grade,
+                          gpa: education.gpa,
                         );
                         onUpdateEducation(index, updated);
                       },
@@ -313,14 +301,12 @@ class EducationForm extends StatelessWidget {
                 context,
                 initialDate: education.startDate,
                 onSelected: (date) {
-                  final updated = EducationModel(
-                    id: education.id,
+                  final updated = Education(
                     degree: education.degree,
                     institution: education.institution,
                     startDate: date,
                     endDate: education.endDate,
-                    isCurrent: education.isCurrent,
-                    grade: education.grade,
+                    gpa: education.gpa,
                   );
                   onUpdateEducation(index, updated);
                 },

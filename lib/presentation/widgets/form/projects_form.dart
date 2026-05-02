@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/project_model.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Changed import
 
 class ProjectsForm extends StatelessWidget {
-  final List<ProjectModel> projects;
+  final List<Project> projects; // ✅ Changed from ProjectModel
   final VoidCallback onAdd;
-  final Function(int, ProjectModel) onUpdate;
+  final Function(int, Project) onUpdate; // ✅ Changed
   final Function(int) onRemove;
 
   const ProjectsForm({
@@ -77,7 +77,7 @@ class ProjectsForm extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(BuildContext context, int index, ProjectModel project) {
+  Widget _buildCard(BuildContext context, int index, Project project) {
     final nameController = TextEditingController(text: project.name);
     final descController = TextEditingController(text: project.description);
     final techController = TextEditingController(
@@ -116,8 +116,7 @@ class ProjectsForm extends StatelessWidget {
                     prefixIcon: Icon(Icons.title),
                   ),
                   onChanged: (value) {
-                    final updated = ProjectModel(
-                      id: project.id,
+                    final updated = Project(
                       name: value,
                       description: project.description,
                       technologies: project.technologies,
@@ -137,8 +136,7 @@ class ProjectsForm extends StatelessWidget {
                   ),
                   maxLines: 3,
                   onChanged: (value) {
-                    final updated = ProjectModel(
-                      id: project.id,
+                    final updated = Project(
                       name: project.name,
                       description: value,
                       technologies: project.technologies,
@@ -156,8 +154,7 @@ class ProjectsForm extends StatelessWidget {
                     prefixIcon: Icon(Icons.code),
                   ),
                   onChanged: (value) {
-                    final updated = ProjectModel(
-                      id: project.id,
+                    final updated = Project(
                       name: project.name,
                       description: project.description,
                       technologies: value.isEmpty ? null : value,
@@ -176,8 +173,7 @@ class ProjectsForm extends StatelessWidget {
                   ),
                   keyboardType: TextInputType.url,
                   onChanged: (value) {
-                    final updated = ProjectModel(
-                      id: project.id,
+                    final updated = Project(
                       name: project.name,
                       description: project.description,
                       technologies: project.technologies,

@@ -1,33 +1,29 @@
-import 'package:android_cv_maker/data/models/education_model.dart';
-import 'package:android_cv_maker/data/models/experience_model.dart';
-import 'package:android_cv_maker/data/models/personal_info_model.dart';
-import 'package:android_cv_maker/data/models/language_model.dart';
-import 'package:android_cv_maker/data/models/certification_model.dart';
-import 'package:android_cv_maker/data/models/project_model.dart';
-import 'package:android_cv_maker/data/models/social_link_model.dart';
-import 'package:android_cv_maker/data/models/custom_section_model.dart';
+import 'package:flutter/material.dart';
 
 import '../local/cv_storage.dart';
-import '../models/cv_data_model.dart';
+import '../models/cv_data.dart'; // ✅ CVModel (if needed)
+// Note: All model classes are now in cv_data.dart, so no separate imports needed!
 
 class CVRepository {
   final CVStorage _storage = CVStorage();
 
-  Future<void> saveCV(CVDataModel cvData) async {
+  // ✅ Changed CVDataModel to CVData
+  Future<void> saveCV(CVData cvData) async {
     try {
       await _storage.saveCVData(cvData);
-      print('CV saved successfully: ${cvData.id}');
+      debugPrint('CV saved successfully');
     } catch (e) {
-      print('Error saving CV: $e');
+      debugPrint('Error saving CV: $e');
       rethrow;
     }
   }
 
-  Future<CVDataModel?> loadCV() async {
+  // ✅ Changed CVDataModel to CVData
+  Future<CVData?> loadCV() async {
     try {
-      return await _storage.loadCVData();
+      return await _storage.loadCVData(null);
     } catch (e) {
-      print('Error loading CV: $e');
+      debugPrint('Error loading CV: $e');
       return null;
     }
   }
@@ -35,15 +31,15 @@ class CVRepository {
   Future<void> clearCV() async {
     try {
       await _storage.clearCVData();
-      print('CV data cleared successfully');
+      debugPrint('CV data cleared successfully');
     } catch (e) {
-      print('Error clearing CV: $e');
+      debugPrint('Error clearing CV: $e');
       rethrow;
     }
   }
 
-  Future<bool> _needsMigration(CVDataModel cv) async {
-    // Check for missing new fields
+  // ✅ Updated to use CVData
+  Future<bool> _needsMigration(CVData cv) async {
     if (cv.certifications.isEmpty && cv.skills.isNotEmpty) {
       return true;
     }
@@ -59,12 +55,19 @@ class CVRepository {
     return false;
   }
 
-  Future<CVDataModel> _migrateData(CVDataModel oldData) async {
-    print('Migrating old CV data to new structure...');
+  // ✅ Updated to use CVData
+  Future<CVData> _migrateData(CVData oldData) async {
+    debugPrint('Migrating old CV data to new structure...');
 
-    final migratedData = CVDataModel(
-      id: oldData.id,
-      personalInfo: oldData.personalInfo,
+    final migratedData = CVData(
+      fullName: oldData.fullName,
+      title: oldData.title,
+      email: oldData.email,
+      phone: oldData.phone,
+      location: oldData.location,
+      linkedin: oldData.linkedin,
+      github: oldData.github,
+      summary: oldData.summary,
       experiences: oldData.experiences,
       educations: oldData.educations,
       skills: oldData.skills,
@@ -83,51 +86,48 @@ class CVRepository {
       customSections: oldData.customSections.isEmpty
           ? []
           : oldData.customSections,
-      lastUpdated: DateTime.now(),
-      selectedTemplateId: oldData.selectedTemplateId,
     );
 
     await saveCV(migratedData);
-    print('Migration complete');
+    debugPrint('Migration complete');
     return migratedData;
   }
 
-  List<LanguageModel> _getDefaultLanguages() {
+  // ✅ Using Language from cv_data.dart
+  List<Language> _getDefaultLanguages() {
     return [
-      LanguageModel(id: 'lang1', name: 'English', proficiencyLevel: 'Fluent'),
-      LanguageModel(id: 'lang2', name: 'Urdu', proficiencyLevel: 'Native'),
+      Language(name: 'English', proficiencyLevel: 'Fluent'),
+      Language(name: 'Urdu', proficiencyLevel: 'Native'),
     ];
   }
 
-  List<CertificationModel> _getDefaultCertifications() {
+  // ✅ Using Certification from cv_data.dart
+  List<Certification> _getDefaultCertifications() {
     return [
-      CertificationModel(
-        id: 'cert1',
+      Certification(
         name: 'Flutter Development Bootcamp',
-        organization: 'Udemy',
+        issuer: 'Udemy',
         issueDate: DateTime(2023, 6),
       ),
-      CertificationModel(
-        id: 'cert2',
+      Certification(
         name: 'Google Associate Android Developer',
-        organization: 'Google',
+        issuer: 'Google',
         issueDate: DateTime(2022, 12),
       ),
     ];
   }
 
-  List<ProjectModel> _getDefaultProjects() {
+  // ✅ Using Project from cv_data.dart
+  List<Project> _getDefaultProjects() {
     return [
-      ProjectModel(
-        id: 'proj1',
+      Project(
         name: 'E-Commerce App',
         description:
             'A fully functional e-commerce app with payment integration',
         technologies: 'Flutter, Firebase, Stripe',
         projectUrl: 'https://github.com/johndoe/ecommerce',
       ),
-      ProjectModel(
-        id: 'proj2',
+      Project(
         name: 'Portfolio Website',
         description: 'Personal portfolio website showcasing work',
         technologies: 'Flutter Web, HTML, CSS',
@@ -136,6 +136,7 @@ class CVRepository {
     ];
   }
 
+  // ✅ Using SocialLinkModel from cv_data.dart
   List<SocialLinkModel> _getDefaultSocialLinks() {
     return [
       SocialLinkModel(
@@ -156,49 +157,49 @@ class CVRepository {
     ];
   }
 
-  Future<CVDataModel> getSampleCV() async {
+  // ✅ Updated to use CVData
+  Future<CVData> getSampleCV() async {
     try {
       final existing = await loadCV();
       if (existing != null) {
         if (await _needsMigration(existing)) {
           return await _migrateData(existing);
         }
-        print('Returning existing CV data');
+        debugPrint('Returning existing CV data');
         return existing;
       }
-      print('Creating fresh sample CV for new user');
+      debugPrint('Creating fresh sample CV for new user');
       return _createFreshSample();
     } catch (e) {
-      print('Error in getSampleCV: $e');
+      debugPrint('Error in getSampleCV: $e');
       return _createFreshSample();
     }
   }
 
-  CVDataModel _createFreshSample() {
-    return CVDataModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      personalInfo: PersonalInfoModel(
-        fullName: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+92 300 1234567',
-        address: 'Karachi, Pakistan',
-        summary:
-            'Experienced Flutter developer with 5+ years of experience building high-quality mobile applications.',
-      ),
+  // ✅ Updated to use CVData
+  CVData _createFreshSample() {
+    return CVData(
+      fullName: 'John Doe',
+      title: 'Flutter Developer',
+      email: 'john.doe@example.com',
+      phone: '+92 300 1234567',
+      location: 'Karachi, Pakistan',
+      linkedin: '',
+      github: '',
+      summary:
+          'Experienced Flutter developer with 5+ years of experience building high-quality mobile applications.',
       experiences: [
-        ExperienceModel(
-          id: 'exp1',
+        Experience(
           jobTitle: 'Senior Flutter Developer',
-          companyName: 'Tech Solutions',
+          company: 'Tech Solutions',
           startDate: DateTime(2022, 1),
           isCurrent: true,
           description:
               'Leading mobile app development team, implementing clean architecture and state management solutions.',
         ),
-        ExperienceModel(
-          id: 'exp2',
+        Experience(
           jobTitle: 'Mobile Developer',
-          companyName: 'Startup Inc',
+          company: 'Startup Inc',
           startDate: DateTime(2019, 6),
           endDate: DateTime(2021, 12),
           isCurrent: false,
@@ -207,13 +208,12 @@ class CVRepository {
         ),
       ],
       educations: [
-        EducationModel(
-          id: 'edu1',
+        Education(
           degree: 'BS Computer Science',
           institution: 'University of Karachi',
           startDate: DateTime(2015, 9),
           endDate: DateTime(2019, 6),
-          grade: '3.8 GPA',
+          gpa: '3.8 GPA',
         ),
       ],
       skills: [
@@ -230,61 +230,47 @@ class CVRepository {
       projects: _getDefaultProjects(),
       socialLinks: _getDefaultSocialLinks(),
       customSections: [],
-      lastUpdated: DateTime.now(),
-      selectedTemplateId: 'usa_classic',
     );
   }
 
-  CVDataModel getDemoCV() {
-    return CVDataModel(
-      id: 'demo_${DateTime.now().millisecondsSinceEpoch}',
-      personalInfo: PersonalInfoModel(
-        fullName: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        phone: '+44 20 7946 0123',
-        address: 'London, UK',
-        summary:
-            'Creative designer with 8+ years of experience in UI/UX design.',
-      ),
+  // ✅ Updated to use CVData
+  CVData getDemoCV() {
+    return CVData(
+      fullName: 'Jane Smith',
+      title: 'Lead Product Designer',
+      email: 'jane.smith@example.com',
+      phone: '+44 20 7946 0123',
+      location: 'London, UK',
+      linkedin: '',
+      github: '',
+      summary: 'Creative designer with 8+ years of experience in UI/UX design.',
       experiences: [
-        ExperienceModel(
-          id: 'demo_exp1',
+        Experience(
           jobTitle: 'Lead Product Designer',
-          companyName: 'Creative Agency',
+          company: 'Creative Agency',
           startDate: DateTime(2021, 3),
           isCurrent: true,
           description: 'Leading design team for major client projects.',
         ),
       ],
       educations: [
-        EducationModel(
-          id: 'demo_edu1',
+        Education(
           degree: 'BA in Design',
           institution: 'Central Saint Martins',
           startDate: DateTime(2010, 9),
           endDate: DateTime(2014, 6),
-          grade: 'First Class Honours',
+          gpa: 'First Class Honours',
         ),
       ],
       skills: ['Figma', 'Adobe XD', 'Sketch', 'UI Design', 'UX Research'],
       languages: [
-        LanguageModel(
-          id: 'demo_lang1',
-          name: 'English',
-          proficiencyLevel: 'Native',
-        ),
-        LanguageModel(
-          id: 'demo_lang2',
-          name: 'French',
-          proficiencyLevel: 'Intermediate',
-        ),
+        Language(name: 'English', proficiencyLevel: 'Native'),
+        Language(name: 'French', proficiencyLevel: 'Intermediate'),
       ],
       certifications: [],
       projects: [],
       socialLinks: [],
       customSections: [],
-      lastUpdated: DateTime.now(),
-      selectedTemplateId: 'modern_executive',
     );
   }
 }

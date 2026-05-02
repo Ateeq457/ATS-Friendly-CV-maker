@@ -1,4 +1,4 @@
-import 'package:android_cv_maker/data/models/cv_model.dart';
+import 'package:android_cv_maker/data/models/cv_data.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/design_system.dart';
 

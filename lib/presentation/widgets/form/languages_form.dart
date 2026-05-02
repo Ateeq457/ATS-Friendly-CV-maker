@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/language_model.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Changed import
 
 class LanguagesForm extends StatelessWidget {
-  final List<LanguageModel> languages;
+  final List<Language> languages; // ✅ Changed from LanguageModel
   final VoidCallback onAddLanguage;
-  final Function(int, LanguageModel) onUpdateLanguage;
+  final Function(int, Language) onUpdateLanguage; // ✅ Changed
   final Function(int) onRemoveLanguage;
 
   const LanguagesForm({
@@ -83,7 +83,7 @@ class LanguagesForm extends StatelessWidget {
   Widget _buildLanguageCard(
     BuildContext context,
     int index,
-    LanguageModel language,
+    Language language,
   ) {
     final proficiencyLevels = ['Basic', 'Intermediate', 'Fluent', 'Native'];
 
@@ -127,8 +127,7 @@ class LanguagesForm extends StatelessWidget {
                       TextPosition(offset: language.name.length),
                     ),
                   onChanged: (value) {
-                    final updated = LanguageModel(
-                      id: language.id,
+                    final updated = Language(
                       name: value,
                       proficiencyLevel: language.proficiencyLevel,
                     );
@@ -148,8 +147,7 @@ class LanguagesForm extends StatelessWidget {
                     return DropdownMenuItem(value: level, child: Text(level));
                   }).toList(),
                   onChanged: (value) {
-                    final updated = LanguageModel(
-                      id: language.id,
+                    final updated = Language(
                       name: language.name,
                       proficiencyLevel: value ?? '',
                     );

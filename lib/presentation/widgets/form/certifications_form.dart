@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/certification_model.dart';
 import 'date_picker_field.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Import from cv_data
 
 class CertificationsForm extends StatelessWidget {
-  final List<CertificationModel> certifications;
+  final List<Certification> certifications; // ✅ Changed from CertificationModel
   final VoidCallback onAdd;
-  final Function(int, CertificationModel) onUpdate;
+  final Function(int, Certification) onUpdate; // ✅ Changed
   final Function(int) onRemove;
 
   const CertificationsForm({
@@ -83,9 +83,11 @@ class CertificationsForm extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(BuildContext context, int index, CertificationModel cert) {
+  Widget _buildCard(BuildContext context, int index, Certification cert) {
     final nameController = TextEditingController(text: cert.name);
-    final orgController = TextEditingController(text: cert.organization);
+    final orgController = TextEditingController(
+      text: cert.issuer,
+    ); // ✅ Changed from organization
     final credIdController = TextEditingController(
       text: cert.credentialId ?? '',
     );
@@ -122,10 +124,9 @@ class CertificationsForm extends StatelessWidget {
                     prefixIcon: Icon(Icons.verified),
                   ),
                   onChanged: (value) {
-                    final updated = CertificationModel(
-                      id: cert.id,
+                    final updated = Certification(
                       name: value,
-                      organization: cert.organization,
+                      issuer: cert.issuer,
                       issueDate: cert.issueDate,
                       expiryDate: cert.expiryDate,
                       credentialId: cert.credentialId,
@@ -143,10 +144,9 @@ class CertificationsForm extends StatelessWidget {
                     prefixIcon: Icon(Icons.business),
                   ),
                   onChanged: (value) {
-                    final updated = CertificationModel(
-                      id: cert.id,
+                    final updated = Certification(
                       name: cert.name,
-                      organization: value,
+                      issuer: value,
                       issueDate: cert.issueDate,
                       expiryDate: cert.expiryDate,
                       credentialId: cert.credentialId,
@@ -156,7 +156,6 @@ class CertificationsForm extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                // ✅ Date fields with labels above
                 _buildDateSection(context, cert, index),
                 const SizedBox(height: 12),
                 TextField(
@@ -167,10 +166,9 @@ class CertificationsForm extends StatelessWidget {
                     prefixIcon: Icon(Icons.badge),
                   ),
                   onChanged: (value) {
-                    final updated = CertificationModel(
-                      id: cert.id,
+                    final updated = Certification(
                       name: cert.name,
-                      organization: cert.organization,
+                      issuer: cert.issuer,
                       issueDate: cert.issueDate,
                       expiryDate: cert.expiryDate,
                       credentialId: value.isEmpty ? null : value,
@@ -189,10 +187,9 @@ class CertificationsForm extends StatelessWidget {
                   ),
                   keyboardType: TextInputType.url,
                   onChanged: (value) {
-                    final updated = CertificationModel(
-                      id: cert.id,
+                    final updated = Certification(
                       name: cert.name,
-                      organization: cert.organization,
+                      issuer: cert.issuer,
                       issueDate: cert.issueDate,
                       expiryDate: cert.expiryDate,
                       credentialId: cert.credentialId,
@@ -209,10 +206,9 @@ class CertificationsForm extends StatelessWidget {
     );
   }
 
-  // ✅ New method for date section with labels above
   Widget _buildDateSection(
     BuildContext context,
-    CertificationModel cert,
+    Certification cert,
     int index,
   ) {
     return Row(
@@ -234,10 +230,9 @@ class CertificationsForm extends StatelessWidget {
                 label: '',
                 initialDate: cert.issueDate ?? DateTime.now(),
                 onDateSelected: (date) {
-                  final updated = CertificationModel(
-                    id: cert.id,
+                  final updated = Certification(
                     name: cert.name,
-                    organization: cert.organization,
+                    issuer: cert.issuer,
                     issueDate: date,
                     expiryDate: cert.expiryDate,
                     credentialId: cert.credentialId,
@@ -267,10 +262,9 @@ class CertificationsForm extends StatelessWidget {
                 label: '',
                 initialDate: cert.expiryDate ?? DateTime.now(),
                 onDateSelected: (date) {
-                  final updated = CertificationModel(
-                    id: cert.id,
+                  final updated = Certification(
                     name: cert.name,
-                    organization: cert.organization,
+                    issuer: cert.issuer,
                     issueDate: cert.issueDate,
                     expiryDate: date,
                     credentialId: cert.credentialId,

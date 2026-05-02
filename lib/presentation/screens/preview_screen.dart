@@ -1,13 +1,12 @@
+// File: lib/presentation/screens/preview_screen.dart
+
 import 'dart:io';
-
-import 'package:android_cv_maker/models/cv_data.dart';
-
-import 'package:android_cv_maker/core/config/template_config.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../../data/models/cv_data.dart';
+import '../../services/template_service.dart';
 
 class PreviewScreen extends StatefulWidget {
   final CVData cvData;
@@ -24,222 +23,234 @@ class PreviewScreen extends StatefulWidget {
 }
 
 class _PreviewScreenState extends State<PreviewScreen> {
-  late final WebViewController _webViewController;
+  late final WebViewController _controller;
+
   bool _isLoading = true;
-  bool _isGenerating = false;
-  late TemplateConfig _templateConfig;
+  bool _isExporting = false;
+  String? _html;
 
   @override
   void initState() {
     super.initState();
-    _templateConfig = TemplateGenerator.getTemplateById(
-      widget.templateIndex.toString(),
-    );
-    _initWebView();
+    _init();
   }
 
-  Future<void> _initWebView() async {
-    final html = HtmlGenerator.generateResumeHtml(
+  Future<void> _init() async {
+    _html = await TemplateService.generateHTML(
       widget.cvData,
-      _templateConfig,
+      widget.templateIndex,
     );
 
-    _webViewController = WebViewController()
+    _html = _injectMeta(_html!);
+    _html = _injectPrintCSS(_html!);
+
+    _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
             setState(() => _isLoading = false);
-          },
-          onWebResourceError: (error) {
-            print('WebView error: ${error.description}');
-            setState(() => _isLoading = false);
+            _controller.runJavaScript('document.body.style.zoom="45%"');
           },
         ),
-      );
+      )
+      ..setBackgroundColor(Colors.white);
 
-    await _webViewController.loadHtmlString(html);
+    await _controller.loadHtmlString(_html!);
+  }
+
+  String _injectMeta(String html) {
+    if (html.contains('<meta name="viewport"')) return html;
+    return html.replaceFirst(
+      '<head>',
+      '<head><meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    );
+  }
+
+  String _injectPrintCSS(String html) {
+    const css = '''
+    <style>
+      @media print {
+        body { zoom: 100%; margin:0; padding:0; }
+        .no-print { display:none !important; }
+        .resume-container { box-shadow:none; margin:0; }
+      }
+    </style>
+    ''';
+
+    return html.contains('</head>')
+        ? html.replaceFirst('</head>', '$css</head>')
+        : html;
+  }
+
+  // 🔥 MAIN EXPORT FLOW (NO SERVER - PROFESSIONAL UX)
+  Future<void> _exportPDF() async {
+    if (_html == null) return;
+
+    setState(() => _isExporting = true);
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+
+      final fileName = '${widget.cvData.fullName.replaceAll(' ', '_')}.html';
+
+      final file = File('${dir.path}/$fileName');
+
+      await file.writeAsString(_html!);
+
+      // 👇 UX delay (smooth feel)
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // 👇 Instruction dialog
+      if (mounted) {
+        await _showInstructionDialog();
+      }
+
+      // 🔥 OPEN FILE (BEST METHOD)
+      final result = await OpenFilex.open(file.path);
+
+      if (result.type != ResultType.done) {
+        _showSnack("Could not open file", Colors.red);
+      } else {
+        _showSnack("Opened in browser", Colors.green);
+      }
+    } catch (e) {
+      _showSnack(e.toString(), Colors.red);
+    }
+
+    setState(() => _isExporting = false);
+  }
+
+  // 🔥 CLEAN INSTRUCTION DIALOG
+  Future<void> _showInstructionDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text("Save as PDF"),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Follow these steps:"),
+              SizedBox(height: 12),
+              Text("1️⃣ Tap menu (⋮)"),
+              Text("2️⃣ Select Print"),
+              Text("3️⃣ Choose Save as PDF"),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Got it"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+  }
+
+  void _zoomIn() {
+    _controller.runJavaScript(
+      'document.body.style.zoom=(parseFloat(document.body.style.zoom||0.45)+0.1)',
+    );
+  }
+
+  void _zoomOut() {
+    _controller.runJavaScript(
+      'document.body.style.zoom=(parseFloat(document.body.style.zoom||0.45)-0.1)',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomBar(),
-    );
-  }
+      backgroundColor: Colors.grey[100],
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: Text('Preview - ${_templateConfig.layoutStyle}'),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: _isGenerating
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.download),
-          onPressed: _isGenerating ? null : () => _downloadHTML(),
-          tooltip: 'Download HTML',
-        ),
-        IconButton(
-          icon: const Icon(Icons.share),
-          onPressed: () => _shareHTML(),
-          tooltip: 'Share',
-        ),
-        IconButton(
-          icon: const Icon(Icons.print),
-          onPressed: () => _printCV(),
-          tooltip: 'Print / Save as PDF',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return WebViewWidget(controller: _webViewController);
-  }
-
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.2))),
+      appBar: AppBar(
+        title: const Text("CV Preview"),
+        centerTitle: true,
+        actions: [
+          IconButton(onPressed: _zoomIn, icon: const Icon(Icons.zoom_in)),
+          IconButton(onPressed: _zoomOut, icon: const Icon(Icons.zoom_out)),
+        ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Back to Edit'),
+
+      body: Stack(
+        children: [
+          if (!_isLoading) WebViewWidget(controller: _controller),
+
+          if (_isLoading)
+            const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text("Rendering your CV..."),
+                ],
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: _printCV,
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Save as PDF'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
+        ],
+      ),
+
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(blurRadius: 10, color: Colors.black.withOpacity(0.05)),
           ],
         ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Edit"),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: _isExporting ? null : _exportPDF,
+                  icon: _isExporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.picture_as_pdf),
+
+                  label: Text(_isExporting ? "Preparing..." : "Export PDF"),
+
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
-  }
-
-  Future<void> _downloadHTML() async {
-    setState(() => _isGenerating = true);
-
-    try {
-      final html = HtmlGenerator.generateResumeHtml(
-        widget.cvData,
-        _templateConfig,
-      );
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName =
-          '${widget.cvData.fullName.replaceAll(' ', '_')}_resume.html';
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(html);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Saved: $fileName'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isGenerating = false);
-    }
-  }
-
-  Future<void> _shareHTML() async {
-    setState(() => _isGenerating = true);
-
-    try {
-      final html = HtmlGenerator.generateResumeHtml(
-        widget.cvData,
-        _templateConfig,
-      );
-      final directory = await getTemporaryDirectory();
-      final fileName =
-          '${widget.cvData.fullName.replaceAll(' ', '_')}_resume.html';
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(html);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Check out my resume!',
-        subject: widget.cvData.fullName,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isGenerating = false);
-    }
-  }
-
-  Future<void> _printCV() async {
-    setState(() => _isGenerating = true);
-
-    try {
-      final html = HtmlGenerator.generateResumeHtml(
-        widget.cvData,
-        _templateConfig,
-      );
-
-      // Create a temporary HTML file
-      final directory = await getTemporaryDirectory();
-      final fileName =
-          '${widget.cvData.fullName.replaceAll(' ', '_')}_resume.html';
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(html);
-
-      // Share the file - user can open and print
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Open this file and press Ctrl+P (Cmd+P) to save as PDF',
-        subject: '${widget.cvData.fullName} - Resume',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'HTML file shared. Open and use browser print to save as PDF.',
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isGenerating = false);
-    }
   }
 }

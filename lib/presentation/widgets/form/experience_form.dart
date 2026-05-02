@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/experience_model.dart';
+import '../../../data/models/cv_data.dart'; // ✅ Changed import
 
 class ExperienceForm extends StatelessWidget {
-  final List<ExperienceModel> experiences;
+  final List<Experience> experiences; // ✅ Changed from ExperienceModel
   final VoidCallback onAddExperience;
-  final Function(int, ExperienceModel) onUpdateExperience;
+  final Function(int, Experience) onUpdateExperience; // ✅ Changed
   final Function(int) onRemoveExperience;
 
   const ExperienceForm({
@@ -83,7 +83,7 @@ class ExperienceForm extends StatelessWidget {
   Widget _buildExperienceCard(
     BuildContext context,
     int index,
-    ExperienceModel experience,
+    Experience experience,
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -102,9 +102,7 @@ class ExperienceForm extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              experience.companyName.isEmpty
-                  ? 'Add company'
-                  : experience.companyName,
+              experience.company.isEmpty ? 'Add company' : experience.company,
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
             trailing: IconButton(
@@ -127,10 +125,9 @@ class ExperienceForm extends StatelessWidget {
                       TextPosition(offset: experience.jobTitle.length),
                     ),
                   onChanged: (value) {
-                    final updated = ExperienceModel(
-                      id: experience.id,
+                    final updated = Experience(
                       jobTitle: value,
-                      companyName: experience.companyName,
+                      company: experience.company,
                       startDate: experience.startDate,
                       endDate: experience.endDate,
                       isCurrent: experience.isCurrent,
@@ -146,16 +143,14 @@ class ExperienceForm extends StatelessWidget {
                     hintText: 'Google / Microsoft / Startup',
                     prefixIcon: Icon(Icons.business),
                   ),
-                  controller:
-                      TextEditingController(text: experience.companyName)
-                        ..selection = TextSelection.fromPosition(
-                          TextPosition(offset: experience.companyName.length),
-                        ),
+                  controller: TextEditingController(text: experience.company)
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: experience.company.length),
+                    ),
                   onChanged: (value) {
-                    final updated = ExperienceModel(
-                      id: experience.id,
+                    final updated = Experience(
                       jobTitle: experience.jobTitle,
-                      companyName: value,
+                      company: value,
                       startDate: experience.startDate,
                       endDate: experience.endDate,
                       isCurrent: experience.isCurrent,
@@ -165,7 +160,6 @@ class ExperienceForm extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                // ✅ Date section with labels above
                 _buildDateSection(context, experience, index),
                 const SizedBox(height: 8),
                 Row(
@@ -173,10 +167,9 @@ class ExperienceForm extends StatelessWidget {
                     Checkbox(
                       value: experience.isCurrent,
                       onChanged: (value) {
-                        final updated = ExperienceModel(
-                          id: experience.id,
+                        final updated = Experience(
                           jobTitle: experience.jobTitle,
-                          companyName: experience.companyName,
+                          company: experience.company,
                           startDate: experience.startDate,
                           endDate: null,
                           isCurrent: value ?? false,
@@ -203,10 +196,9 @@ class ExperienceForm extends StatelessWidget {
                           TextPosition(offset: experience.description.length),
                         ),
                   onChanged: (value) {
-                    final updated = ExperienceModel(
-                      id: experience.id,
+                    final updated = Experience(
                       jobTitle: experience.jobTitle,
-                      companyName: experience.companyName,
+                      company: experience.company,
                       startDate: experience.startDate,
                       endDate: experience.endDate,
                       isCurrent: experience.isCurrent,
@@ -223,10 +215,9 @@ class ExperienceForm extends StatelessWidget {
     );
   }
 
-  // ✅ Date section with labels above
   Widget _buildDateSection(
     BuildContext context,
-    ExperienceModel experience,
+    Experience experience,
     int index,
   ) {
     return Column(
@@ -252,10 +243,9 @@ class ExperienceForm extends StatelessWidget {
                       context,
                       initialDate: experience.startDate,
                       onSelected: (date) {
-                        final updated = ExperienceModel(
-                          id: experience.id,
+                        final updated = Experience(
                           jobTitle: experience.jobTitle,
-                          companyName: experience.companyName,
+                          company: experience.company,
                           startDate: date,
                           endDate: experience.endDate,
                           isCurrent: experience.isCurrent,
@@ -285,10 +275,9 @@ class ExperienceForm extends StatelessWidget {
                       context,
                       initialDate: experience.endDate ?? DateTime.now(),
                       onSelected: (date) {
-                        final updated = ExperienceModel(
-                          id: experience.id,
+                        final updated = Experience(
                           jobTitle: experience.jobTitle,
-                          companyName: experience.companyName,
+                          company: experience.company,
                           startDate: experience.startDate,
                           endDate: date,
                           isCurrent: false,
@@ -319,10 +308,9 @@ class ExperienceForm extends StatelessWidget {
                 context,
                 initialDate: experience.startDate,
                 onSelected: (date) {
-                  final updated = ExperienceModel(
-                    id: experience.id,
+                  final updated = Experience(
                     jobTitle: experience.jobTitle,
-                    companyName: experience.companyName,
+                    company: experience.company,
                     startDate: date,
                     endDate: experience.endDate,
                     isCurrent: experience.isCurrent,

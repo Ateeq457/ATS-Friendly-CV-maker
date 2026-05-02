@@ -1,7 +1,6 @@
+// File: lib/presentation/screens/create_cv_screen.dart
 import 'package:android_cv_maker/core/templates/template_generator.dart';
-import 'package:android_cv_maker/data/models/custom_section_model.dart';
-import 'package:android_cv_maker/data/models/social_link_model.dart';
-import 'package:android_cv_maker/models/cv_data.dart';
+import 'package:android_cv_maker/data/models/cv_data.dart'; // ✅ CHANGED
 import 'package:android_cv_maker/presentation/screens/preview_screen.dart';
 import 'package:android_cv_maker/presentation/widgets/form/custom_section_form.dart';
 import 'package:flutter/material.dart';
@@ -15,45 +14,49 @@ import '../widgets/form/languages_form.dart';
 import '../widgets/form/certifications_form.dart';
 import '../widgets/form/projects_form.dart';
 import '../widgets/form/social_links_form.dart';
-import 'all_templates_screen.dart';
 
 class CreateCVScreen extends StatefulWidget {
   final String? initialCVId;
+  final int? selectedTemplateIndex;
 
-  const CreateCVScreen({super.key, this.initialCVId});
+  const CreateCVScreen({
+    super.key,
+    this.initialCVId,
+    this.selectedTemplateIndex,
+  });
 
   @override
   State<CreateCVScreen> createState() => _CreateCVScreenState();
 }
 
 class _CreateCVScreenState extends State<CreateCVScreen> {
+  late CVFormProvider _provider;
+
   @override
   void initState() {
     super.initState();
-    // Load CV if editing existing
-    Future.microtask(() {
-      final provider = context.read<CVFormProvider>();
-      if (widget.initialCVId != null) {
-        provider.loadCV(widget.initialCVId);
-      }
-    });
+    // Get existing provider or create new one
+    _provider = CVFormProvider();
+    if (widget.initialCVId != null) {
+      _provider.loadCV(widget.initialCVId);
+    }
   }
 
   @override
   void dispose() {
-    _saveOnExit();
+    _provider.dispose();
     super.dispose();
   }
 
   Future<void> _saveOnExit() async {
-    final viewModel = context.read<CVFormProvider>();
-    await viewModel.forceSave();
+    await _provider.forceSave();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CVFormProvider(),
+    return ChangeNotifierProvider.value(
+      // ✅ FIXED: Use .value instead of .create
+      value: _provider,
       child: Scaffold(appBar: _buildAppBar(context), body: _buildBody(context)),
     );
   }
@@ -174,7 +177,7 @@ class _CreateCVScreenState extends State<CreateCVScreen> {
               // Social Links
               SocialLinksForm(
                 socialLinks: cvData.socialLinks,
-                onAdd: () => viewModel.addSocialLink(SocialLink.empty()),
+                onAdd: () => viewModel.addSocialLink(SocialLinkModel.empty()),
                 onUpdate: (index, link) =>
                     viewModel.updateSocialLink(index, link),
                 onRemove: (index) => viewModel.removeSocialLink(index),
@@ -185,7 +188,7 @@ class _CreateCVScreenState extends State<CreateCVScreen> {
               CustomSectionsForm(
                 sections: cvData.customSections,
                 onAddSection: () =>
-                    viewModel.addCustomSection(CustomSection.empty()),
+                    viewModel.addCustomSection(CustomSectionModel.empty()),
                 onRemoveSection: (index) =>
                     viewModel.removeCustomSection(index),
                 onUpdateSectionTitle: (index, title) =>
@@ -212,15 +215,17 @@ class _CreateCVScreenState extends State<CreateCVScreen> {
   }
 
   void _showPreview(BuildContext context, CVFormProvider viewModel) async {
-    // Save before preview
     await viewModel.forceSave();
+    if (!mounted) return;
+
+    int templateIndex = widget.selectedTemplateIndex ?? 0; // ✅ Use passed index
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PreviewScreen(
           cvData: viewModel.cvData,
-          templateIndex: 0, // Default template
+          templateIndex: templateIndex,
         ),
       ),
     );

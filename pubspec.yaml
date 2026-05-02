@@ -24,6 +24,7 @@ dependencies:
 
   # File System Paths
   path_provider: ^2.1.5
+  flutter_native_html_to_pdf: ^3.0.2
 
   # Share Files / PDF (UPDATED)
   share_plus: ^8.0.2
@@ -34,6 +35,9 @@ dependencies:
   html: ^0.15.4
   pdf: ^3.10.7
   zoom_widget: ^2.0.0
+
+  url_launcher: ^6.2.6
+  open_filex: ^4.4.0
 
 
 
@@ -50,3 +54,5 @@ flutter:
   #   - assets/templates/usa_classic/config.json
   #   - assets/templates/usa_classic/template.html
   #   - assets/templates/usa_classic/style.css
+  assets:
+    - assets/templates/
