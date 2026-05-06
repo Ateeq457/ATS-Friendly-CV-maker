@@ -1,20 +1,70 @@
+// File: lib/presentation/widgets/form/optimized_social_links_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/cv_data.dart'; // ✅ Changed import (SocialLinkModel is here)
+import '../../../data/models/cv_data.dart';
+import 'optimized_text_field.dart';
 
-class SocialLinksForm extends StatelessWidget {
+class OptimizedSocialLinksForm extends StatefulWidget {
   final List<SocialLinkModel> socialLinks;
-  final VoidCallback onAdd;
-  final Function(int, SocialLinkModel) onUpdate;
-  final Function(int) onRemove;
+  final Function(List<SocialLinkModel>) onSocialLinksChanged;
 
-  SocialLinksForm({
+  const OptimizedSocialLinksForm({
     super.key,
     required this.socialLinks,
-    required this.onAdd,
-    required this.onUpdate,
-    required this.onRemove,
+    required this.onSocialLinksChanged,
   });
+
+  @override
+  State<OptimizedSocialLinksForm> createState() =>
+      _OptimizedSocialLinksFormState();
+}
+
+class _OptimizedSocialLinksFormState extends State<OptimizedSocialLinksForm> {
+  late List<SocialLinkModel> _localSocialLinks;
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _localSocialLinks = List.from(widget.socialLinks);
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onSocialLinksChanged(_localSocialLinks);
+    });
+  }
+
+  void _addSocialLink() {
+    setState(() {
+      _localSocialLinks.add(SocialLinkModel.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _updateSocialLink(int index, SocialLinkModel updated) {
+    setState(() {
+      _localSocialLinks[index] = updated;
+    });
+    _scheduleSave();
+  }
+
+  void _removeSocialLink(int index) {
+    setState(() {
+      _localSocialLinks.removeAt(index);
+    });
+    _scheduleSave();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
 
   final List<Map<String, dynamic>> platforms = [
     {'icon': Icons.link, 'name': 'linkedin', 'label': 'LinkedIn'},
@@ -47,18 +97,18 @@ class SocialLinksForm extends StatelessWidget {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: onAdd,
+                  onPressed: _addSocialLink,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
                 ),
               ],
             ),
             const Divider(height: 24),
-            if (socialLinks.isEmpty)
+            if (_localSocialLinks.isEmpty)
               _buildEmptyState(context)
             else
-              ...List.generate(socialLinks.length, (index) {
-                return _buildCard(context, index, socialLinks[index]);
+              ..._localSocialLinks.asMap().entries.map((entry) {
+                return _buildCard(context, entry.key, entry.value);
               }),
           ],
         ),
@@ -79,7 +129,10 @@ class SocialLinksForm extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
-            TextButton(onPressed: onAdd, child: const Text('Add Link')),
+            TextButton(
+              onPressed: _addSocialLink,
+              child: const Text('Add Link'),
+            ),
           ],
         ),
       ),
@@ -87,7 +140,6 @@ class SocialLinksForm extends StatelessWidget {
   }
 
   Widget _buildCard(BuildContext context, int index, SocialLinkModel link) {
-    final urlController = TextEditingController(text: link.url);
     String selectedPlatform = link.platform;
 
     return Container(
@@ -106,7 +158,7 @@ class SocialLinksForm extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => onRemove(index),
+              onPressed: () => _removeSocialLink(index),
             ),
           ),
           Padding(
@@ -132,31 +184,33 @@ class SocialLinksForm extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (value) {
-                    selectedPlatform = value ?? '';
-                    final updated = SocialLinkModel(
-                      id: link.id,
-                      platform: selectedPlatform,
-                      url: link.url,
+                    final selected = value ?? '';
+                    _updateSocialLink(
+                      index,
+                      SocialLinkModel(
+                        id: link.id,
+                        platform: selected,
+                        url: link.url,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: urlController,
-                  decoration: const InputDecoration(
-                    labelText: 'URL / Handle *',
-                    hintText: 'https://linkedin.com/in/username',
-                    prefixIcon: Icon(Icons.link),
-                  ),
+                OptimizedTextField(
+                  initialValue: link.url,
+                  label: 'URL / Handle *',
+                  hint: 'https://linkedin.com/in/username',
+                  prefixIcon: Icons.link,
                   keyboardType: TextInputType.url,
                   onChanged: (value) {
-                    final updated = SocialLinkModel(
-                      id: link.id,
-                      platform: link.platform,
-                      url: value,
+                    _updateSocialLink(
+                      index,
+                      SocialLinkModel(
+                        id: link.id,
+                        platform: link.platform,
+                        url: value,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
               ],

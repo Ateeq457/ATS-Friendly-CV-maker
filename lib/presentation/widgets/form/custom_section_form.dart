@@ -1,49 +1,122 @@
+// File: lib/presentation/widgets/form/optimized_custom_sections_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
 import '../../../data/models/cv_data.dart';
+import 'optimized_text_field.dart';
 
-class CustomSectionsForm extends StatefulWidget {
+class OptimizedCustomSectionsForm extends StatefulWidget {
   final List<CustomSectionModel> sections;
-  final VoidCallback onAddSection;
-  final Function(int) onRemoveSection;
-  final Function(int, String) onUpdateSectionTitle;
-  final Function(int) onAddEntry;
-  final Function(int, int, String, String, String?) onUpdateEntry;
-  final Function(int, int) onRemoveEntry;
+  final Function(List<CustomSectionModel>) onSectionsChanged;
 
-  const CustomSectionsForm({
+  const OptimizedCustomSectionsForm({
     super.key,
     required this.sections,
-    required this.onAddSection,
-    required this.onRemoveSection,
-    required this.onUpdateSectionTitle,
-    required this.onAddEntry,
-    required this.onUpdateEntry,
-    required this.onRemoveEntry,
+    required this.onSectionsChanged,
   });
 
   @override
-  State<CustomSectionsForm> createState() => _CustomSectionsFormState();
+  State<OptimizedCustomSectionsForm> createState() =>
+      _OptimizedCustomSectionsFormState();
 }
 
-class _CustomSectionsFormState extends State<CustomSectionsForm> {
-  final Map<String, TextEditingController> _controllers = {};
+class _OptimizedCustomSectionsFormState
+    extends State<OptimizedCustomSectionsForm> {
+  late List<CustomSectionModel> _localSections;
+  Timer? _saveTimer;
 
-  TextEditingController _getController(String key, String initial) {
-    if (_controllers.containsKey(key)) {
-      return _controllers[key]!;
-    } else {
-      final controller = TextEditingController(text: initial);
-      _controllers[key] = controller;
-      return controller;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _localSections = _deepCopySections(widget.sections);
+  }
+
+  List<CustomSectionModel> _deepCopySections(
+    List<CustomSectionModel> sections,
+  ) {
+    return sections
+        .map(
+          (section) => CustomSectionModel(
+            id: section.id,
+            title: section.title,
+            entries: section.entries
+                .map(
+                  (entry) => CustomSectionEntry(
+                    id: entry.id,
+                    title: entry.title,
+                    description: entry.description,
+                    date: entry.date,
+                  ),
+                )
+                .toList(),
+          ),
+        )
+        .toList();
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onSectionsChanged(_localSections);
+    });
+  }
+
+  void _addSection() {
+    setState(() {
+      _localSections.add(CustomSectionModel.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _removeSection(int index) {
+    setState(() {
+      _localSections.removeAt(index);
+    });
+    _scheduleSave();
+  }
+
+  void _updateSectionTitle(int index, String title) {
+    setState(() {
+      _localSections[index].title = title;
+    });
+    _scheduleSave();
+  }
+
+  void _addEntry(int sectionIndex) {
+    setState(() {
+      _localSections[sectionIndex].entries.add(CustomSectionEntry.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _updateEntry(
+    int sectionIndex,
+    int entryIndex,
+    String title,
+    String description,
+    String? date,
+  ) {
+    setState(() {
+      _localSections[sectionIndex].entries[entryIndex].title = title;
+      _localSections[sectionIndex].entries[entryIndex].description =
+          description;
+      _localSections[sectionIndex].entries[entryIndex].date = date;
+    });
+    _scheduleSave();
+  }
+
+  void _removeEntry(int sectionIndex, int entryIndex) {
+    setState(() {
+      _localSections[sectionIndex].entries.removeAt(entryIndex);
+    });
+    _scheduleSave();
   }
 
   @override
   void dispose() {
-    for (var c in _controllers.values) {
-      c.dispose();
-    }
+    _saveTimer?.cancel();
     super.dispose();
   }
 
@@ -74,7 +147,7 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: widget.onAddSection,
+                  onPressed: _addSection,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
                 ),
@@ -82,15 +155,11 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
             ),
             const Divider(height: 24),
 
-            if (widget.sections.isEmpty)
+            if (_localSections.isEmpty)
               _buildEmptyState(context)
             else
-              ...List.generate(widget.sections.length, (index) {
-                return _buildSectionCard(
-                  context,
-                  index,
-                  widget.sections[index],
-                );
+              ..._localSections.asMap().entries.map((entry) {
+                return _buildSectionCard(context, entry.key, entry.value);
               }),
           ],
         ),
@@ -112,7 +181,7 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: widget.onAddSection,
+              onPressed: _addSection,
               child: const Text('Add Section'),
             ),
           ],
@@ -126,8 +195,6 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
     int sectionIndex,
     CustomSectionModel section,
   ) {
-    final sectionKey = "section_$sectionIndex";
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -138,37 +205,33 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
         children: [
           ListTile(
             leading: Icon(Icons.drag_handle, color: Colors.grey[400]),
-            title: TextField(
-              controller: _getController("${sectionKey}_title", section.title),
-              decoration: const InputDecoration(
-                labelText: 'Section Title *',
-                hintText: 'e.g., Awards, Publications',
-                border: InputBorder.none,
-              ),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-              onChanged: (value) =>
-                  widget.onUpdateSectionTitle(sectionIndex, value),
+            title: OptimizedTextField(
+              initialValue: section.title,
+              label: 'Section Title *',
+              hint: 'e.g., Awards, Publications',
+              prefixIcon: Icons.title,
+              onChanged: (value) => _updateSectionTitle(sectionIndex, value),
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => widget.onRemoveSection(sectionIndex),
+              onPressed: () => _removeSection(sectionIndex),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                ...List.generate(section.entries.length, (entryIndex) {
+                ...section.entries.asMap().entries.map((entry) {
                   return _buildEntryCard(
                     context,
                     sectionIndex,
-                    entryIndex,
-                    section.entries[entryIndex],
+                    entry.key,
+                    entry.value,
                   );
                 }),
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  onPressed: () => widget.onAddEntry(sectionIndex),
+                  onPressed: () => _addEntry(sectionIndex),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Add Entry'),
                 ),
@@ -186,8 +249,6 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
     int entryIndex,
     CustomSectionEntry entry,
   ) {
-    final keyBase = "s${sectionIndex}_e${entryIndex}";
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -200,14 +261,12 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _getController("${keyBase}_title", entry.title),
-                  decoration: const InputDecoration(
-                    labelText: 'Title *',
-                    hintText: 'Award name...',
-                    border: UnderlineInputBorder(),
-                  ),
-                  onChanged: (value) => widget.onUpdateEntry(
+                child: OptimizedTextField(
+                  initialValue: entry.title,
+                  label: 'Title *',
+                  hint: 'Award name...',
+                  prefixIcon: Icons.title,
+                  onChanged: (value) => _updateEntry(
                     sectionIndex,
                     entryIndex,
                     value,
@@ -218,16 +277,16 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
               ),
               IconButton(
                 icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                onPressed: () => widget.onRemoveEntry(sectionIndex, entryIndex),
+                onPressed: () => _removeEntry(sectionIndex, entryIndex),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _getController("${keyBase}_desc", entry.description),
-            decoration: const InputDecoration(labelText: 'Description *'),
+          OptimizedTextField(
+            initialValue: entry.description,
+            label: 'Description *',
             maxLines: 2,
-            onChanged: (value) => widget.onUpdateEntry(
+            onChanged: (value) => _updateEntry(
               sectionIndex,
               entryIndex,
               entry.title,
@@ -236,10 +295,12 @@ class _CustomSectionsFormState extends State<CustomSectionsForm> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _getController("${keyBase}_date", entry.date ?? ''),
-            decoration: const InputDecoration(labelText: 'Date (Optional)'),
-            onChanged: (value) => widget.onUpdateEntry(
+          OptimizedTextField(
+            initialValue: entry.date ?? '',
+            label: 'Date (Optional)',
+            hint: 'e.g., 2023, Jan 2023 - Present',
+            prefixIcon: Icons.calendar_today,
+            onChanged: (value) => _updateEntry(
               sectionIndex,
               entryIndex,
               entry.title,

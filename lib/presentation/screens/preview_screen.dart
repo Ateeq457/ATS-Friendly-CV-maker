@@ -69,14 +69,39 @@ class _PreviewScreenState extends State<PreviewScreen> {
 
   String _injectPrintCSS(String html) {
     const css = '''
-    <style>
-      @media print {
-        body { zoom: 100%; margin:0; padding:0; }
-        .no-print { display:none !important; }
-        .resume-container { box-shadow:none; margin:0; }
+  <style>
+    @page {
+      size: Letter;
+      margin: 0.4in;
+    }
+    
+    @media print {
+      body { 
+        zoom: 1 !important; 
+        -webkit-text-size-adjust: 100% !important;
+        margin: 0 !important; 
+        padding: 0 !important;
       }
-    </style>
-    ''';
+      .no-print { display: none !important; }
+      .resume-container { 
+        box-shadow: none !important; 
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+      }
+    }
+  </style>
+
+  <script>
+    window.addEventListener('beforeprint', function() {
+      document.body.style.zoom = '1';
+    });
+    window.addEventListener('afterprint', function() {
+      document.body.style.zoom = '0.45';
+    });
+  </script>
+  ''';
 
     return html.contains('</head>')
         ? html.replaceFirst('</head>', '$css</head>')

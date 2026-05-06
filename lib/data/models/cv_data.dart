@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ============ CV MODEL (Main Class) ============
 class CVModel {
@@ -19,6 +20,25 @@ class CVModel {
     required this.lastEdited,
     this.data = const {},
   });
+
+  // ✅ OPTIMIZED: copyWith method
+  CVModel copyWith({
+    String? id,
+    String? title,
+    String? status,
+    double? progress,
+    DateTime? lastEdited,
+    Map<String, dynamic>? data,
+  }) {
+    return CVModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      lastEdited: lastEdited ?? this.lastEdited,
+      data: data ?? this.data,
+    );
+  }
 
   // Sample data for UI demonstration
   static List<CVModel> getSampleCVs() {
@@ -47,12 +67,36 @@ class CVModel {
     ];
   }
 
-  static void deleteCV(String id) {
-    debugPrint('Deleting CV: $id');
+  // ✅ FIXED: Real delete method
+  static Future<void> deleteCV(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cv_$id');
+      debugPrint('✅ CV deleted: $id');
+    } catch (e) {
+      debugPrint('❌ Error deleting CV: $e');
+    }
   }
 
-  static void duplicateCV(CVModel cv) {
-    debugPrint('Duplicating CV: ${cv.title}');
+  // ✅ ADDED: Real duplicate method
+  static Future<CVModel?> duplicateCV(CVModel cv) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final newCV = cv.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: "${cv.title} Copy",
+        lastEdited: DateTime.now(),
+      );
+
+      await prefs.setString('cv_${newCV.id}', jsonEncode(newCV.toJson()));
+
+      debugPrint('✅ CV duplicated: ${cv.title} → ${newCV.title}');
+      return newCV;
+    } catch (e) {
+      debugPrint('❌ Error duplicating CV: $e');
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -79,6 +123,9 @@ class CVModel {
     );
   }
 }
+
+// ============ REST OF YOUR CODE (CVData, Experience, etc.) ============
+// ... (baqi sab kuch same rahega)
 
 // ============ CV DATA CLASS (for form provider) ============
 class CVData {
@@ -552,5 +599,14 @@ class CustomSectionEntry {
       title: '',
       description: '',
     );
+  }
+  static Future<void> deleteCV(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cv_$id');
+      debugPrint('CV deleted: $id');
+    } catch (e) {
+      debugPrint('Error deleting CV: $e');
+    }
   }
 }

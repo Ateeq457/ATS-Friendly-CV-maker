@@ -1,17 +1,66 @@
+// File: lib/presentation/widgets/form/optimized_skills_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
 
-class SkillsForm extends StatelessWidget {
+class OptimizedSkillsForm extends StatefulWidget {
   final List<String> skills;
-  final Function(String) onAddSkill;
-  final Function(String) onRemoveSkill;
+  final Function(List<String>) onSkillsChanged;
 
-  const SkillsForm({
+  const OptimizedSkillsForm({
     super.key,
     required this.skills,
-    required this.onAddSkill,
-    required this.onRemoveSkill,
+    required this.onSkillsChanged,
   });
+
+  @override
+  State<OptimizedSkillsForm> createState() => _OptimizedSkillsFormState();
+}
+
+class _OptimizedSkillsFormState extends State<OptimizedSkillsForm> {
+  late List<String> _localSkills;
+  final TextEditingController _inputController = TextEditingController();
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _localSkills = List.from(widget.skills);
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onSkillsChanged(_localSkills);
+    });
+  }
+
+  void _addSkill(String skill) {
+    if (skill.trim().isEmpty) return;
+    if (_localSkills.contains(skill.trim())) return;
+
+    setState(() {
+      _localSkills.add(skill.trim());
+    });
+    _scheduleSave();
+    _inputController.clear();
+  }
+
+  void _removeSkill(String skill) {
+    setState(() {
+      _localSkills.remove(skill);
+    });
+    _scheduleSave();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    _inputController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +87,17 @@ class SkillsForm extends StatelessWidget {
             const Divider(height: 24),
             _buildSkillInput(context),
             const SizedBox(height: 16),
-            if (skills.isEmpty)
+            if (_localSkills.isEmpty)
               _buildEmptyState(context)
             else
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: skills.map((skill) {
+                children: _localSkills.map((skill) {
                   return Chip(
                     label: Text(skill),
                     deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => onRemoveSkill(skill),
+                    onDeleted: () => _removeSkill(skill),
                     backgroundColor: Theme.of(
                       context,
                     ).primaryColor.withOpacity(0.1),
@@ -68,13 +117,11 @@ class SkillsForm extends StatelessWidget {
   }
 
   Widget _buildSkillInput(BuildContext context) {
-    final controller = TextEditingController();
-
     return Row(
       children: [
         Expanded(
           child: TextField(
-            controller: controller,
+            controller: _inputController,
             decoration: const InputDecoration(
               hintText: 'e.g., Flutter, Dart, Firebase...',
               prefixIcon: Icon(Icons.add_circle_outline),
@@ -88,8 +135,7 @@ class SkillsForm extends StatelessWidget {
             ),
             onSubmitted: (value) {
               if (value.trim().isNotEmpty) {
-                onAddSkill(value.trim());
-                controller.clear();
+                _addSkill(value);
               }
             },
           ),
@@ -99,9 +145,8 @@ class SkillsForm extends StatelessWidget {
           width: 80,
           child: ElevatedButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                onAddSkill(controller.text.trim());
-                controller.clear();
+              if (_inputController.text.trim().isNotEmpty) {
+                _addSkill(_inputController.text);
               }
             },
             style: ElevatedButton.styleFrom(

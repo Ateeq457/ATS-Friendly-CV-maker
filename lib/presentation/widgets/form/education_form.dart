@@ -1,20 +1,69 @@
+// File: lib/presentation/widgets/form/optimized_education_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/cv_data.dart'; // ✅ Import from cv_data
+import '../../../data/models/cv_data.dart';
+import 'optimized_text_field.dart';
 
-class EducationForm extends StatelessWidget {
-  final List<Education> educations; // ✅ Changed from EducationModel
-  final VoidCallback onAddEducation;
-  final Function(int, Education) onUpdateEducation; // ✅ Changed
-  final Function(int) onRemoveEducation;
+class OptimizedEducationForm extends StatefulWidget {
+  final List<Education> educations;
+  final Function(List<Education>) onEducationsChanged;
 
-  const EducationForm({
+  const OptimizedEducationForm({
     super.key,
     required this.educations,
-    required this.onAddEducation,
-    required this.onUpdateEducation,
-    required this.onRemoveEducation,
+    required this.onEducationsChanged,
   });
+
+  @override
+  State<OptimizedEducationForm> createState() => _OptimizedEducationFormState();
+}
+
+class _OptimizedEducationFormState extends State<OptimizedEducationForm> {
+  late List<Education> _localEducations;
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _localEducations = List.from(widget.educations);
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onEducationsChanged(_localEducations);
+    });
+  }
+
+  void _addEducation() {
+    setState(() {
+      _localEducations.add(Education.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _updateEducation(int index, Education updated) {
+    setState(() {
+      _localEducations[index] = updated;
+    });
+    _scheduleSave();
+  }
+
+  void _removeEducation(int index) {
+    setState(() {
+      _localEducations.removeAt(index);
+    });
+    _scheduleSave();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +87,18 @@ class EducationForm extends StatelessWidget {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: onAddEducation,
+                  onPressed: _addEducation,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
                 ),
               ],
             ),
             const Divider(height: 24),
-            if (educations.isEmpty)
+            if (_localEducations.isEmpty)
               _buildEmptyState(context)
             else
-              ...List.generate(educations.length, (index) {
-                return _buildEducationCard(context, index, educations[index]);
+              ..._localEducations.asMap().entries.map((entry) {
+                return _buildEducationCard(context, entry.key, entry.value);
               }),
           ],
         ),
@@ -71,7 +120,7 @@ class EducationForm extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: onAddEducation,
+              onPressed: _addEducation,
               child: const Text('Add Education'),
             ),
           ],
@@ -107,54 +156,48 @@ class EducationForm extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => onRemoveEducation(index),
+              onPressed: () => _removeEducation(index),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Degree *',
-                    hintText: 'BS Computer Science',
-                    prefixIcon: Icon(Icons.verified),
-                  ),
-                  controller: TextEditingController(text: education.degree)
-                    ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: education.degree.length),
-                    ),
+                OptimizedTextField(
+                  initialValue: education.degree,
+                  label: 'Degree *',
+                  hint: 'BS Computer Science',
+                  prefixIcon: Icons.verified,
                   onChanged: (value) {
-                    final updated = Education(
-                      degree: value,
-                      institution: education.institution,
-                      startDate: education.startDate,
-                      endDate: education.endDate,
-                      gpa: education.gpa,
+                    _updateEducation(
+                      index,
+                      Education(
+                        degree: value,
+                        institution: education.institution,
+                        startDate: education.startDate,
+                        endDate: education.endDate,
+                        gpa: education.gpa,
+                      ),
                     );
-                    onUpdateEducation(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Institution *',
-                    hintText: 'University of Example',
-                    prefixIcon: Icon(Icons.business),
-                  ),
-                  controller: TextEditingController(text: education.institution)
-                    ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: education.institution.length),
-                    ),
+                OptimizedTextField(
+                  initialValue: education.institution,
+                  label: 'Institution *',
+                  hint: 'University of Example',
+                  prefixIcon: Icons.business,
                   onChanged: (value) {
-                    final updated = Education(
-                      degree: education.degree,
-                      institution: value,
-                      startDate: education.startDate,
-                      endDate: education.endDate,
-                      gpa: education.gpa,
+                    _updateEducation(
+                      index,
+                      Education(
+                        degree: education.degree,
+                        institution: value,
+                        startDate: education.startDate,
+                        endDate: education.endDate,
+                        gpa: education.gpa,
+                      ),
                     );
-                    onUpdateEducation(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -165,39 +208,38 @@ class EducationForm extends StatelessWidget {
                     Checkbox(
                       value: education.endDate == null,
                       onChanged: (value) {
-                        final updated = Education(
-                          degree: education.degree,
-                          institution: education.institution,
-                          startDate: education.startDate,
-                          endDate: value == true ? null : DateTime.now(),
-                          gpa: education.gpa,
+                        _updateEducation(
+                          index,
+                          Education(
+                            degree: education.degree,
+                            institution: education.institution,
+                            startDate: education.startDate,
+                            endDate: value == true ? null : DateTime.now(),
+                            gpa: education.gpa,
+                          ),
                         );
-                        onUpdateEducation(index, updated);
                       },
                     ),
                     const Text('I currently study here'),
                   ],
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Grade (Optional)',
-                    hintText: '3.8 / 4.0, A+, First Class...',
-                    prefixIcon: Icon(Icons.star),
-                  ),
-                  controller: TextEditingController(text: education.gpa ?? '')
-                    ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: (education.gpa ?? '').length),
-                    ),
+                OptimizedTextField(
+                  initialValue: education.gpa ?? '',
+                  label: 'Grade (Optional)',
+                  hint: '3.8 / 4.0, A+, First Class...',
+                  prefixIcon: Icons.star,
                   onChanged: (value) {
-                    final updated = Education(
-                      degree: education.degree,
-                      institution: education.institution,
-                      startDate: education.startDate,
-                      endDate: education.endDate,
-                      gpa: value.isEmpty ? null : value,
+                    _updateEducation(
+                      index,
+                      Education(
+                        degree: education.degree,
+                        institution: education.institution,
+                        startDate: education.startDate,
+                        endDate: education.endDate,
+                        gpa: value.isEmpty ? null : value,
+                      ),
                     );
-                    onUpdateEducation(index, updated);
                   },
                 ),
               ],
@@ -238,14 +280,16 @@ class EducationForm extends StatelessWidget {
                       context,
                       initialDate: education.startDate,
                       onSelected: (date) {
-                        final updated = Education(
-                          degree: education.degree,
-                          institution: education.institution,
-                          startDate: date,
-                          endDate: education.endDate,
-                          gpa: education.gpa,
+                        _updateEducation(
+                          index,
+                          Education(
+                            degree: education.degree,
+                            institution: education.institution,
+                            startDate: date,
+                            endDate: education.endDate,
+                            gpa: education.gpa,
+                          ),
                         );
-                        onUpdateEducation(index, updated);
                       },
                     ),
                   ],
@@ -269,14 +313,16 @@ class EducationForm extends StatelessWidget {
                       context,
                       initialDate: education.endDate ?? DateTime.now(),
                       onSelected: (date) {
-                        final updated = Education(
-                          degree: education.degree,
-                          institution: education.institution,
-                          startDate: education.startDate,
-                          endDate: date,
-                          gpa: education.gpa,
+                        _updateEducation(
+                          index,
+                          Education(
+                            degree: education.degree,
+                            institution: education.institution,
+                            startDate: education.startDate,
+                            endDate: date,
+                            gpa: education.gpa,
+                          ),
                         );
-                        onUpdateEducation(index, updated);
                       },
                     ),
                   ],
@@ -301,14 +347,16 @@ class EducationForm extends StatelessWidget {
                 context,
                 initialDate: education.startDate,
                 onSelected: (date) {
-                  final updated = Education(
-                    degree: education.degree,
-                    institution: education.institution,
-                    startDate: date,
-                    endDate: education.endDate,
-                    gpa: education.gpa,
+                  _updateEducation(
+                    index,
+                    Education(
+                      degree: education.degree,
+                      institution: education.institution,
+                      startDate: date,
+                      endDate: education.endDate,
+                      gpa: education.gpa,
+                    ),
                   );
-                  onUpdateEducation(index, updated);
                 },
               ),
             ],

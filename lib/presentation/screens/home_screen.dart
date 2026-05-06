@@ -1,14 +1,19 @@
 // File: lib/presentation/screens/home_screen.dart
+
+import 'dart:convert';
+import 'package:android_cv_maker/data/local/cv_storage.dart';
 import 'package:android_cv_maker/data/models/cv_data.dart';
 import 'package:android_cv_maker/presentation/screens/all_cvs_screen.dart';
 import 'package:android_cv_maker/presentation/screens/all_templates_screen.dart';
 import 'package:android_cv_maker/presentation/screens/create_cv_screen.dart';
 import 'package:android_cv_maker/presentation/screens/template_preview_screen.dart';
+import 'package:android_cv_maker/services/refresh_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/constants/design_system.dart';
-import '../../data/models/template_model.dart'; // ✅ ADDE
+import '../../data/models/template_model.dart';
 
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/hero_section.dart';
@@ -31,25 +36,104 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<CVModel> _userCVs = [];
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
+    _loadCVs();
+    // Listen to refresh events from other screens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<RefreshService>().addListener(_onRefresh);
+      }
+    });
   }
 
-  void _refreshData() {
-    setState(() {});
+  @override
+  void dispose() {
+    context.read<RefreshService>().removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  void _onRefresh() {
+    _loadCVs();
+  }
+
+  Future<void> _loadCVs() async {
+    setState(() => _isLoading = true);
+    try {
+      final storage = CVStorage();
+      _userCVs = await storage.getAllCVs();
+      debugPrint('✅ HomeScreen: Loaded ${_userCVs.length} CVs');
+    } catch (e) {
+      debugPrint('❌ Error loading CVs: $e');
+      _userCVs = [];
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteCV(CVModel cv) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete CV'),
+        content: Text('Are you sure you want to delete "${cv.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final storage = CVStorage();
+        await storage.deleteCV(cv.id);
+        await _loadCVs();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${cv.title}" deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error deleting CV: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting CV'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final userCVs = CVModel.getSampleCVs();
-    final hasCVs = userCVs.isNotEmpty;
+    final hasCVs = _userCVs.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const HomeAppBar(),
-      body: hasCVs
-          ? _buildReturningUserView(context, userCVs)
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : hasCVs
+          ? _buildReturningUserView(context, _userCVs)
           : _buildFirstTimeUserView(context),
       floatingActionButton: _buildSmartFAB(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -59,8 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // ========== FIRST TIME USER VIEW ==========
   Widget _buildFirstTimeUserView(BuildContext context) {
     final popularTemplates = TemplateModel.getPopularTemplates();
-    final benefits = TemplateModel.getBenefits();
-    final quickSteps = TemplateModel.getQuickSteps();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -77,7 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onSeeAll: () => _navigateToAllTemplates(context),
           ),
           const SizedBox(height: DesignSystem.paddingXXLarge),
-
+          QuickStartSteps(),
+          const SizedBox(height: DesignSystem.paddingXLarge),
+          BenefitsSection(),
           const SizedBox(height: DesignSystem.paddingXXLarge),
           SampleCVPreview(onViewSample: () => _showSampleCV(context)),
           const SizedBox(height: DesignSystem.paddingXLarge),
@@ -120,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             recentCVs: recentCVs,
             onCVTap: (cv) => _navigateToEditCV(context, cv),
             onEdit: (cv) => _navigateToEditCV(context, cv),
-            onDelete: (cv) => _deleteCV(context, cv),
+            onDelete: (cv) => _deleteCV,
           ),
           const SizedBox(height: 28),
           SectionHeader(
@@ -213,57 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ========== DUPLICATE CV ==========
-  void _duplicateCV(BuildContext context, CVModel cv) {
-    setState(() {
-      CVModel.duplicateCV(cv);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('"${cv.title}" duplicated successfully'),
-        backgroundColor: Colors.blue,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // ========== DELETE CV ==========
-  void _deleteCV(BuildContext context, CVModel cv) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete CV'),
-        content: Text('Are you sure you want to delete "${cv.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      setState(() {
-        CVModel.deleteCV(cv.id);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"${cv.title}" deleted successfully'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
   // ========== NAVIGATION METHODS ==========
   void _showSampleCV(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -275,13 +308,16 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateCVScreen()),
-    );
+    ).then((_) => _loadCVs());
   }
 
   void _navigateToEditCV(BuildContext context, CVModel cv) {
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(SnackBar(content: Text('Edit ${cv.title} coming soon!')));
+      MaterialPageRoute(
+        builder: (context) => CreateCVScreen(initialCVId: cv.id),
+      ),
+    ).then((_) => _loadCVs());
   }
 
   void _navigateToAllTemplates(BuildContext context) async {
@@ -292,7 +328,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToTemplateDetail(BuildContext context, TemplateModel template) {
-    // ✅ FIXED: Don't pass template parameter
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Creating CV with ${template.name} template...'),
@@ -302,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateCVScreen()),
-    );
+    ).then((_) => _loadCVs());
   }
 
   void _navigateToImportCV(BuildContext context) {
@@ -316,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (context) => const AllCVsScreen()),
     );
-    _refreshData();
+    _loadCVs();
   }
 
   void _previewTemplate(BuildContext context, TemplateModel template) {

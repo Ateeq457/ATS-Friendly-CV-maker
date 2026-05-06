@@ -1,20 +1,69 @@
+// File: lib/presentation/widgets/form/optimized_languages_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
-import '../../../data/models/cv_data.dart'; // ✅ Changed import
+import '../../../data/models/cv_data.dart';
+import 'optimized_text_field.dart';
 
-class LanguagesForm extends StatelessWidget {
-  final List<Language> languages; // ✅ Changed from LanguageModel
-  final VoidCallback onAddLanguage;
-  final Function(int, Language) onUpdateLanguage; // ✅ Changed
-  final Function(int) onRemoveLanguage;
+class OptimizedLanguagesForm extends StatefulWidget {
+  final List<Language> languages;
+  final Function(List<Language>) onLanguagesChanged;
 
-  const LanguagesForm({
+  const OptimizedLanguagesForm({
     super.key,
     required this.languages,
-    required this.onAddLanguage,
-    required this.onUpdateLanguage,
-    required this.onRemoveLanguage,
+    required this.onLanguagesChanged,
   });
+
+  @override
+  State<OptimizedLanguagesForm> createState() => _OptimizedLanguagesFormState();
+}
+
+class _OptimizedLanguagesFormState extends State<OptimizedLanguagesForm> {
+  late List<Language> _localLanguages;
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _localLanguages = List.from(widget.languages);
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onLanguagesChanged(_localLanguages);
+    });
+  }
+
+  void _addLanguage() {
+    setState(() {
+      _localLanguages.add(Language.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _updateLanguage(int index, Language updated) {
+    setState(() {
+      _localLanguages[index] = updated;
+    });
+    _scheduleSave();
+  }
+
+  void _removeLanguage(int index) {
+    setState(() {
+      _localLanguages.removeAt(index);
+    });
+    _scheduleSave();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +87,18 @@ class LanguagesForm extends StatelessWidget {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: onAddLanguage,
+                  onPressed: _addLanguage,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
                 ),
               ],
             ),
             const Divider(height: 24),
-            if (languages.isEmpty)
+            if (_localLanguages.isEmpty)
               _buildEmptyState(context)
             else
-              ...List.generate(languages.length, (index) {
-                return _buildLanguageCard(context, index, languages[index]);
+              ..._localLanguages.asMap().entries.map((entry) {
+                return _buildLanguageCard(context, entry.key, entry.value);
               }),
           ],
         ),
@@ -71,7 +120,7 @@ class LanguagesForm extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: onAddLanguage,
+              onPressed: _addLanguage,
               child: const Text('Add Language'),
             ),
           ],
@@ -109,29 +158,26 @@ class LanguagesForm extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => onRemoveLanguage(index),
+              onPressed: () => _removeLanguage(index),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Language',
-                    hintText: 'English, Urdu, Arabic...',
-                    prefixIcon: Icon(Icons.translate),
-                  ),
-                  controller: TextEditingController(text: language.name)
-                    ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: language.name.length),
-                    ),
+                OptimizedTextField(
+                  initialValue: language.name,
+                  label: 'Language',
+                  hint: 'English, Urdu, Arabic...',
+                  prefixIcon: Icons.translate,
                   onChanged: (value) {
-                    final updated = Language(
-                      name: value,
-                      proficiencyLevel: language.proficiencyLevel,
+                    _updateLanguage(
+                      index,
+                      Language(
+                        name: value,
+                        proficiencyLevel: language.proficiencyLevel,
+                      ),
                     );
-                    onUpdateLanguage(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -147,11 +193,13 @@ class LanguagesForm extends StatelessWidget {
                     return DropdownMenuItem(value: level, child: Text(level));
                   }).toList(),
                   onChanged: (value) {
-                    final updated = Language(
-                      name: language.name,
-                      proficiencyLevel: value ?? '',
+                    _updateLanguage(
+                      index,
+                      Language(
+                        name: language.name,
+                        proficiencyLevel: value ?? '',
+                      ),
                     );
-                    onUpdateLanguage(index, updated);
                   },
                 ),
               ],

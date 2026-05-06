@@ -1,21 +1,72 @@
+// File: lib/presentation/widgets/form/optimized_certifications_form.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
 import 'date_picker_field.dart';
-import '../../../data/models/cv_data.dart'; // ✅ Import from cv_data
+import '../../../data/models/cv_data.dart';
+import 'optimized_text_field.dart';
 
-class CertificationsForm extends StatelessWidget {
-  final List<Certification> certifications; // ✅ Changed from CertificationModel
-  final VoidCallback onAdd;
-  final Function(int, Certification) onUpdate; // ✅ Changed
-  final Function(int) onRemove;
+class OptimizedCertificationsForm extends StatefulWidget {
+  final List<Certification> certifications;
+  final Function(List<Certification>) onCertificationsChanged;
 
-  const CertificationsForm({
+  const OptimizedCertificationsForm({
     super.key,
     required this.certifications,
-    required this.onAdd,
-    required this.onUpdate,
-    required this.onRemove,
+    required this.onCertificationsChanged,
   });
+
+  @override
+  State<OptimizedCertificationsForm> createState() =>
+      _OptimizedCertificationsFormState();
+}
+
+class _OptimizedCertificationsFormState
+    extends State<OptimizedCertificationsForm> {
+  late List<Certification> _localCertifications;
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _localCertifications = List.from(widget.certifications);
+  }
+
+  void _scheduleSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onCertificationsChanged(_localCertifications);
+    });
+  }
+
+  void _addCertification() {
+    setState(() {
+      _localCertifications.add(Certification.empty());
+    });
+    _scheduleSave();
+  }
+
+  void _updateCertification(int index, Certification updated) {
+    setState(() {
+      _localCertifications[index] = updated;
+    });
+    _scheduleSave();
+  }
+
+  void _removeCertification(int index) {
+    setState(() {
+      _localCertifications.removeAt(index);
+    });
+    _scheduleSave();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,18 +92,18 @@ class CertificationsForm extends StatelessWidget {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: onAdd,
+                  onPressed: _addCertification,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
                 ),
               ],
             ),
             const Divider(height: 24),
-            if (certifications.isEmpty)
+            if (_localCertifications.isEmpty)
               _buildEmptyState(context)
             else
-              ...List.generate(certifications.length, (index) {
-                return _buildCard(context, index, certifications[index]);
+              ..._localCertifications.asMap().entries.map((entry) {
+                return _buildCard(context, entry.key, entry.value);
               }),
           ],
         ),
@@ -74,7 +125,7 @@ class CertificationsForm extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: onAdd,
+              onPressed: _addCertification,
               child: const Text('Add Certification'),
             ),
           ],
@@ -84,15 +135,6 @@ class CertificationsForm extends StatelessWidget {
   }
 
   Widget _buildCard(BuildContext context, int index, Certification cert) {
-    final nameController = TextEditingController(text: cert.name);
-    final orgController = TextEditingController(
-      text: cert.issuer,
-    ); // ✅ Changed from organization
-    final credIdController = TextEditingController(
-      text: cert.credentialId ?? '',
-    );
-    final urlController = TextEditingController(text: cert.credentialUrl ?? '');
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -109,93 +151,93 @@ class CertificationsForm extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => onRemove(index),
+              onPressed: () => _removeCertification(index),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Certification Name *',
-                    hintText: 'Google Associate Android Developer',
-                    prefixIcon: Icon(Icons.verified),
-                  ),
+                OptimizedTextField(
+                  initialValue: cert.name,
+                  label: 'Certification Name *',
+                  hint: 'Google Associate Android Developer',
+                  prefixIcon: Icons.verified,
                   onChanged: (value) {
-                    final updated = Certification(
-                      name: value,
-                      issuer: cert.issuer,
-                      issueDate: cert.issueDate,
-                      expiryDate: cert.expiryDate,
-                      credentialId: cert.credentialId,
-                      credentialUrl: cert.credentialUrl,
+                    _updateCertification(
+                      index,
+                      Certification(
+                        name: value,
+                        issuer: cert.issuer,
+                        issueDate: cert.issueDate,
+                        expiryDate: cert.expiryDate,
+                        credentialId: cert.credentialId,
+                        credentialUrl: cert.credentialUrl,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: orgController,
-                  decoration: const InputDecoration(
-                    labelText: 'Issuing Organization *',
-                    hintText: 'Google, Microsoft, Udemy...',
-                    prefixIcon: Icon(Icons.business),
-                  ),
+                OptimizedTextField(
+                  initialValue: cert.issuer,
+                  label: 'Issuing Organization *',
+                  hint: 'Google, Microsoft, Udemy...',
+                  prefixIcon: Icons.business,
                   onChanged: (value) {
-                    final updated = Certification(
-                      name: cert.name,
-                      issuer: value,
-                      issueDate: cert.issueDate,
-                      expiryDate: cert.expiryDate,
-                      credentialId: cert.credentialId,
-                      credentialUrl: cert.credentialUrl,
+                    _updateCertification(
+                      index,
+                      Certification(
+                        name: cert.name,
+                        issuer: value,
+                        issueDate: cert.issueDate,
+                        expiryDate: cert.expiryDate,
+                        credentialId: cert.credentialId,
+                        credentialUrl: cert.credentialUrl,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
                 _buildDateSection(context, cert, index),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: credIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Credential ID (Optional)',
-                    hintText: 'ABC-123-XYZ',
-                    prefixIcon: Icon(Icons.badge),
-                  ),
+                OptimizedTextField(
+                  initialValue: cert.credentialId ?? '',
+                  label: 'Credential ID (Optional)',
+                  hint: 'ABC-123-XYZ',
+                  prefixIcon: Icons.badge,
                   onChanged: (value) {
-                    final updated = Certification(
-                      name: cert.name,
-                      issuer: cert.issuer,
-                      issueDate: cert.issueDate,
-                      expiryDate: cert.expiryDate,
-                      credentialId: value.isEmpty ? null : value,
-                      credentialUrl: cert.credentialUrl,
+                    _updateCertification(
+                      index,
+                      Certification(
+                        name: cert.name,
+                        issuer: cert.issuer,
+                        issueDate: cert.issueDate,
+                        expiryDate: cert.expiryDate,
+                        credentialId: value.isEmpty ? null : value,
+                        credentialUrl: cert.credentialUrl,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: urlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Credential URL (Optional)',
-                    hintText: 'https://...',
-                    prefixIcon: Icon(Icons.link),
-                  ),
+                OptimizedTextField(
+                  initialValue: cert.credentialUrl ?? '',
+                  label: 'Credential URL (Optional)',
+                  hint: 'https://...',
+                  prefixIcon: Icons.link,
                   keyboardType: TextInputType.url,
                   onChanged: (value) {
-                    final updated = Certification(
-                      name: cert.name,
-                      issuer: cert.issuer,
-                      issueDate: cert.issueDate,
-                      expiryDate: cert.expiryDate,
-                      credentialId: cert.credentialId,
-                      credentialUrl: value.isEmpty ? null : value,
+                    _updateCertification(
+                      index,
+                      Certification(
+                        name: cert.name,
+                        issuer: cert.issuer,
+                        issueDate: cert.issueDate,
+                        expiryDate: cert.expiryDate,
+                        credentialId: cert.credentialId,
+                        credentialUrl: value.isEmpty ? null : value,
+                      ),
                     );
-                    onUpdate(index, updated);
                   },
                 ),
               ],
@@ -230,15 +272,17 @@ class CertificationsForm extends StatelessWidget {
                 label: '',
                 initialDate: cert.issueDate ?? DateTime.now(),
                 onDateSelected: (date) {
-                  final updated = Certification(
-                    name: cert.name,
-                    issuer: cert.issuer,
-                    issueDate: date,
-                    expiryDate: cert.expiryDate,
-                    credentialId: cert.credentialId,
-                    credentialUrl: cert.credentialUrl,
+                  _updateCertification(
+                    index,
+                    Certification(
+                      name: cert.name,
+                      issuer: cert.issuer,
+                      issueDate: date,
+                      expiryDate: cert.expiryDate,
+                      credentialId: cert.credentialId,
+                      credentialUrl: cert.credentialUrl,
+                    ),
                   );
-                  onUpdate(index, updated);
                 },
               ),
             ],
@@ -262,15 +306,17 @@ class CertificationsForm extends StatelessWidget {
                 label: '',
                 initialDate: cert.expiryDate ?? DateTime.now(),
                 onDateSelected: (date) {
-                  final updated = Certification(
-                    name: cert.name,
-                    issuer: cert.issuer,
-                    issueDate: cert.issueDate,
-                    expiryDate: date,
-                    credentialId: cert.credentialId,
-                    credentialUrl: cert.credentialUrl,
+                  _updateCertification(
+                    index,
+                    Certification(
+                      name: cert.name,
+                      issuer: cert.issuer,
+                      issueDate: cert.issueDate,
+                      expiryDate: date,
+                      credentialId: cert.credentialId,
+                      credentialUrl: cert.credentialUrl,
+                    ),
                   );
-                  onUpdate(index, updated);
                 },
               ),
             ],
