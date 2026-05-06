@@ -163,7 +163,7 @@ class _AllCVsScreenState extends State<AllCVsScreen> {
 
   Future<void> _duplicateCV(CVModel cv) async {
     try {
-      // ✅ Step 1: Load original CVData
+      // Load original CVData
       final originalData = await _storage.loadCVData(cv.id);
       if (originalData == null) {
         _showSnackBar(
@@ -173,11 +173,13 @@ class _AllCVsScreenState extends State<AllCVsScreen> {
         return;
       }
 
-      // ✅ Step 2: Create new IDs
-      final newId = DateTime.now().millisecondsSinceEpoch.toString();
-      final newTitle = '${cv.title} (Copy)';
+      // ✅ Generate smart duplicate name
+      final String newTitle = _generateDuplicateTitle(cv.title, _allCVs);
+      final String newId = DateTime.now().millisecondsSinceEpoch.toString();
 
-      // ✅ Step 3: Create new CVModel
+      debugPrint('📝 Duplicating: "${cv.title}" → "$newTitle"');
+
+      // Create new CVModel
       final newCV = CVModel(
         id: newId,
         title: newTitle,
@@ -187,7 +189,7 @@ class _AllCVsScreenState extends State<AllCVsScreen> {
         data: originalData.toJson(),
       );
 
-      // ✅ Step 4: Create new CVData (copy of original)
+      // Create new CVData (copy of original)
       final newCVData = CVData(
         fullName: originalData.fullName,
         title: originalData.title,
@@ -208,28 +210,64 @@ class _AllCVsScreenState extends State<AllCVsScreen> {
         customSections: List.from(originalData.customSections),
       );
 
-      // ✅ Step 5: Save both to storage
+      // Save to storage
       await _storage.saveCV(newCV);
       await _storage.saveCVData(newCVData, newId);
 
-      // ✅ Step 6: Optimistic UI update
+      // Update UI
       if (mounted) {
         setState(() {
           _allCVs.insert(0, newCV);
         });
-        _showSnackBar(
-          '"${cv.title}" duplicated successfully',
-          color: Colors.green,
-        );
-
-        // ✅ Step 7: Reload to ensure consistency (optional but safe)
+        _showSnackBar('Duplicated as "$newTitle"', color: Colors.green);
         await _loadCVs();
       }
     } catch (e) {
       debugPrint('❌ Duplicate error: $e');
       _showSnackBar('Failed to duplicate CV.', color: Colors.red);
-      await _loadCVs(); // Rollback on error
+      await _loadCVs();
     }
+  }
+
+  /// ✅ Smart duplicate name generator - Simple & Reliable
+  String _generateDuplicateTitle(
+    String originalTitle,
+    List<CVModel> existingCVs,
+  ) {
+    final base = _cleanBaseTitle(originalTitle);
+
+    int maxIndex = 0;
+
+    for (final cv in existingCVs) {
+      final title = cv.title;
+
+      if (title == base) {
+        maxIndex = maxIndex < 1 ? 1 : maxIndex;
+      }
+
+      final regex = RegExp(
+        r'^' + RegExp.escape(base) + r' \(Copy(?: (\d+))?\)$',
+      );
+
+      final match = regex.firstMatch(title);
+      if (match != null) {
+        if (match.group(1) != null) {
+          final num = int.tryParse(match.group(1)!);
+          if (num != null && num > maxIndex) {
+            maxIndex = num;
+          }
+        } else {
+          maxIndex = maxIndex < 1 ? 1 : maxIndex;
+        }
+      }
+    }
+
+    if (maxIndex == 0) return '$base (Copy)';
+    return '$base (Copy ${maxIndex + 1})';
+  }
+
+  String _cleanBaseTitle(String title) {
+    return title.replaceAll(RegExp(r' \(Copy(?: \d+)?\)$'), '').trim();
   }
 
   // ─── Helpers ─────────────────────────────────

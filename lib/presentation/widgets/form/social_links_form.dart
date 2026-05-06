@@ -31,6 +31,16 @@ class _OptimizedSocialLinksFormState extends State<OptimizedSocialLinksForm> {
     super.initState();
     _localSocialLinks = List.from(widget.socialLinks);
   }
+  // File: lib/presentation/widgets/form/optimized_social_links_form.dart
+
+  @override
+  void didUpdateWidget(OptimizedSocialLinksForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.socialLinks != widget.socialLinks) {
+      _localSocialLinks = List.from(widget.socialLinks);
+      setState(() {});
+    }
+  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();

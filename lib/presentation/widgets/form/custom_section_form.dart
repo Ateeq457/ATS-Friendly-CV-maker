@@ -55,6 +55,16 @@ class _OptimizedCustomSectionsFormState
         )
         .toList();
   }
+  // File: lib/presentation/widgets/form/optimized_custom_sections_form.dart
+
+  @override
+  void didUpdateWidget(OptimizedCustomSectionsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sections != widget.sections) {
+      _localSections = _deepCopySections(widget.sections);
+      setState(() {});
+    }
+  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();

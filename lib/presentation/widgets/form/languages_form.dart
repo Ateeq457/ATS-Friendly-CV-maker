@@ -30,6 +30,16 @@ class _OptimizedLanguagesFormState extends State<OptimizedLanguagesForm> {
     super.initState();
     _localLanguages = List.from(widget.languages);
   }
+  // File: lib/presentation/widgets/form/optimized_languages_form.dart
+
+  @override
+  void didUpdateWidget(OptimizedLanguagesForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.languages != widget.languages) {
+      _localLanguages = List.from(widget.languages);
+      setState(() {});
+    }
+  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();

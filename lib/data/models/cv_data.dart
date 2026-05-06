@@ -11,6 +11,8 @@ class CVModel {
   final double progress; // 0.0 to 1.0
   final DateTime lastEdited;
   final Map<String, dynamic> data; // Actual CV data
+  final bool? isUserCompleted; // ✅ NEW - Track if user marked as completed
+  final DateTime? completedAt;
 
   CVModel({
     required this.id,
@@ -19,6 +21,8 @@ class CVModel {
     this.progress = 0.0,
     required this.lastEdited,
     this.data = const {},
+    this.isUserCompleted, // ✅ NEW
+    this.completedAt,
   });
 
   // ✅ OPTIMIZED: copyWith method
@@ -29,6 +33,8 @@ class CVModel {
     double? progress,
     DateTime? lastEdited,
     Map<String, dynamic>? data,
+    bool? isUserCompleted, // ✅ NEW
+    DateTime? completedAt,
   }) {
     return CVModel(
       id: id ?? this.id,
@@ -37,6 +43,8 @@ class CVModel {
       progress: progress ?? this.progress,
       lastEdited: lastEdited ?? this.lastEdited,
       data: data ?? this.data,
+      isUserCompleted: isUserCompleted ?? this.isUserCompleted,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 
@@ -68,15 +76,15 @@ class CVModel {
   }
 
   // ✅ FIXED: Real delete method
-  static Future<void> deleteCV(String id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('cv_$id');
-      debugPrint('✅ CV deleted: $id');
-    } catch (e) {
-      debugPrint('❌ Error deleting CV: $e');
-    }
-  }
+  // static Future<void> deleteCV(String id) async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     await prefs.remove('cv_$id');
+  //     debugPrint('✅ CV deleted: $id');
+  //   } catch (e) {
+  //     debugPrint('❌ Error deleting CV: $e');
+  //   }
+  // }
 
   // ✅ ADDED: Real duplicate method
   static Future<CVModel?> duplicateCV(CVModel cv) async {
@@ -107,6 +115,8 @@ class CVModel {
       'progress': progress,
       'lastEdited': lastEdited.toIso8601String(),
       'data': data,
+      'isUserCompleted': isUserCompleted, // ✅ NEW
+      'completedAt': completedAt?.toIso8601String(),
     };
   }
 
@@ -120,6 +130,10 @@ class CVModel {
           ? DateTime.parse(json['lastEdited'])
           : DateTime.now(),
       data: json['data'] ?? {},
+      isUserCompleted: json['isUserCompleted'], // ✅ NEW
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
+          : null,
     );
   }
 }

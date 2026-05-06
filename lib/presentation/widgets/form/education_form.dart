@@ -31,6 +31,15 @@ class _OptimizedEducationFormState extends State<OptimizedEducationForm> {
     _localEducations = List.from(widget.educations);
   }
 
+  @override
+  void didUpdateWidget(OptimizedEducationForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.educations != widget.educations) {
+      _localEducations = List.from(widget.educations);
+      setState(() {});
+    }
+  }
+
   void _scheduleSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), () {

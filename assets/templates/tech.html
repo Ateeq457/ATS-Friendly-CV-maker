@@ -11,6 +11,16 @@
             box-sizing: border-box;
         }
         
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        @page {
+            size: Letter;
+            margin: 0.4in;
+        }
+        
         body {
             font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
             background-color: #0F172A;
@@ -178,7 +188,6 @@
             .no-print {
                 display: none;
             }
-            /* Ensure proper page breaks */
             .section {
                 page-break-inside: avoid;
             }
@@ -210,14 +219,18 @@
                         </div>
                     </div>
                     
+                    <!-- ========== LANGUAGES (WITH SECTION WRAPPER) ========== -->
+                    {{#section languages}}
                     <div class="section">
                         <div class="section-title">Languages</div>
                         {{#each languages}}
                         <div class="skill-tag" style="display: block; margin-bottom: 8px;">{{name}} - {{proficiencyLevel}}</div>
                         {{/each}}
                     </div>
+                    {{/section languages}}
                     
-                    <!-- ✅ REMOVED {{#if certifications.length}} -->
+                    <!-- ========== CERTIFICATIONS (WITH SECTION WRAPPER) ========== -->
+                    {{#section certifications}}
                     <div class="section">
                         <div class="section-title">Certifications</div>
                         {{#each certifications}}
@@ -227,6 +240,7 @@
                         </div>
                         {{/each}}
                     </div>
+                    {{/section certifications}}
                 </div>
                 
                 <!-- Right Column -->
@@ -258,6 +272,20 @@
                         </div>
                         {{/each}}
                     </div>
+                    
+                    <!-- ========== PROJECTS (WITH SECTION WRAPPER) ========== -->
+                    {{#section projects}}
+                    <div class="section">
+                        <div class="section-title">Projects</div>
+                        {{#each projects}}
+                        <div class="project-item">
+                            <div class="project-name">{{name}}</div>
+                            <div class="description">{{description}}</div>
+                            {{#if technologies}}<div class="project-tech">Technologies: {{technologies}}</div>{{/if}}
+                        </div>
+                        {{/each}}
+                    </div>
+                    {{/section projects}}
                 </div>
             </div>
         </div>

@@ -1,7 +1,6 @@
 // File: lib/presentation/widgets/form/optimized_experience_section.dart
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../../../data/models/cv_data.dart';
 import 'optimized_text_field.dart';
@@ -30,6 +29,18 @@ class _OptimizedExperienceSectionState
   void initState() {
     super.initState();
     _localExperiences = List.from(widget.experiences);
+  }
+
+  // ✅ ADD THIS METHOD - React to parent data changes
+  @override
+  void didUpdateWidget(OptimizedExperienceSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update local data when parent data changes (e.g., dummy data filled)
+    if (oldWidget.experiences != widget.experiences) {
+      _localExperiences = List.from(widget.experiences);
+      // Force rebuild to show new data
+      setState(() {});
+    }
   }
 
   void _scheduleSave() {

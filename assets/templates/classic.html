@@ -434,7 +434,8 @@
             </div>
         </div>
 
-        <!-- LANGUAGES -->
+        <!-- ========== LANGUAGES (WITH SECTION WRAPPER) ========== -->
+        {{#section languages}}
         <div class="section">
             <div class="section-title">Languages</div>
             <div class="languages-list">
@@ -443,8 +444,10 @@
                 {{/each}}
             </div>
         </div>
+        {{/section languages}}
 
-        <!-- CERTIFICATIONS -->
+        <!-- ========== CERTIFICATIONS (WITH SECTION WRAPPER) ========== -->
+        {{#section certifications}}
         <div class="section">
             <div class="section-title">Certifications</div>
             {{#each certifications}}
@@ -454,8 +457,10 @@
             </div>
             {{/each}}
         </div>
+        {{/section certifications}}
 
-        <!-- PROJECTS -->
+        <!-- ========== PROJECTS (WITH SECTION WRAPPER) ========== -->
+        {{#section projects}}
         <div class="section">
             <div class="section-title">Projects</div>
             {{#each projects}}
@@ -466,6 +471,7 @@
             </div>
             {{/each}}
         </div>
+        {{/section projects}}
     </div>
 
     <div class="no-print">

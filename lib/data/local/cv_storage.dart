@@ -1,11 +1,4 @@
 // File: lib/data/local/cv_storage.dart
-//
-// ✅ ROOT CAUSE FIX:
-//   OLD: saveCVData() always saved to fixed key 'cv_data' — ignoring ID
-//   OLD: loadCVData(id) ignored the id param and always read 'cv_data'
-//   NEW: Every CV saves to 'cv_${id}' — one key per CV, no collisions
-//   NEW: loadCVData(id) reads exactly 'cv_${id}'
-//   NEW: 'cv_data' key is completely removed — no more ghost CVs
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -37,6 +30,28 @@ class CVStorage {
       debugPrint('❌ saveCV error: $e');
       rethrow;
     }
+  }
+
+  /// ✅ Get a single CV by ID
+  Future<CVModel?> getCV(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_modelKey(id));
+      if (jsonString == null) {
+        debugPrint('ℹ️ No CV found for id: $id');
+        return null;
+      }
+      debugPrint('✅ CV loaded: $id');
+      return CVModel.fromJson(jsonDecode(jsonString));
+    } catch (e) {
+      debugPrint('❌ getCV error: $e');
+      return null;
+    }
+  }
+
+  /// ✅ Get a single CV by ID (alias for getCV)
+  Future<CVModel?> loadCV(String id) async {
+    return getCV(id);
   }
 
   Future<void> printAllKeys() async {

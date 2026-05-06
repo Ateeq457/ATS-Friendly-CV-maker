@@ -10,12 +10,17 @@ import '../data/local/cv_storage.dart';
 class CVFormProvider extends ChangeNotifier {
   final CVStorage _storage = CVStorage();
 
+  // Configuration
+  static const double READY_THRESHOLD = 0.85; // 85% = Ready to submit
+  static const double IN_PROGRESS_THRESHOLD = 0.40; // 40% = In Progress
+
   // Core data
   CVData _cvData = CVData.empty();
 
   // State flags
   bool _isLoading = false;
   bool _isDirty = false;
+  bool _isUserMarkedComplete = false; // ✅ Track user's explicit completion
   Timer? _autoSaveTimer;
   String? _currentCVId;
 
@@ -23,6 +28,7 @@ class CVFormProvider extends ChangeNotifier {
   CVData get cvData => _cvData;
   bool get isLoading => _isLoading;
   bool get isDirty => _isDirty;
+  bool get isUserMarkedComplete => _isUserMarkedComplete;
 
   // ============ LOAD METHODS ============
 
@@ -33,13 +39,19 @@ class CVFormProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Load CVData
       final loaded = await _storage.loadCVData(id);
       if (loaded != null) {
         _cvData = loaded;
         _isDirty = false;
         debugPrint('✅ CV loaded: $id');
-      } else {
-        debugPrint('⚠️ No CVData found for id: $id');
+      }
+
+      // Load user's completion preference
+      final cvModel = await _storage.getCV(id);
+      if (cvModel != null) {
+        _isUserMarkedComplete = cvModel.isUserCompleted ?? false;
+        debugPrint('📌 User marked complete: $_isUserMarkedComplete');
       }
     } catch (e) {
       debugPrint('Error loading CV: $e');
@@ -79,6 +91,12 @@ class CVFormProvider extends ChangeNotifier {
         break;
     }
 
+    // ✅ When user edits, reset the completed flag (if it was auto-set)
+    if (_isUserMarkedComplete && _currentCVId != null) {
+      _isUserMarkedComplete = false;
+      debugPrint('🔄 Reset completed flag due to edits');
+    }
+
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -88,6 +106,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void updateExperiences(List<Experience> experiences) {
     _cvData.experiences = experiences;
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -95,6 +114,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void updateEducations(List<Education> educations) {
     _cvData.educations = educations;
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -102,6 +122,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void updateSkills(List<String> skills) {
     _cvData.skills = skills;
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -146,6 +167,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void addExperience(Experience exp) {
     _cvData.experiences.add(exp);
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -153,6 +175,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void updateExperience(int index, Experience exp) {
     _cvData.experiences[index] = exp;
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -160,6 +183,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void removeExperience(int index) {
     _cvData.experiences.removeAt(index);
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -167,6 +191,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void addEducation(Education edu) {
     _cvData.educations.add(edu);
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -174,6 +199,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void updateEducation(int index, Education edu) {
     _cvData.educations[index] = edu;
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -181,6 +207,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void removeEducation(int index) {
     _cvData.educations.removeAt(index);
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -190,6 +217,7 @@ class CVFormProvider extends ChangeNotifier {
     if (skill.trim().isEmpty) return;
     if (!_cvData.skills.contains(skill.trim())) {
       _cvData.skills.add(skill.trim());
+      if (_isUserMarkedComplete) _isUserMarkedComplete = false;
       _markDirty();
       notifyListeners();
       _scheduleAutoSave();
@@ -198,6 +226,7 @@ class CVFormProvider extends ChangeNotifier {
 
   void removeSkill(String skill) {
     _cvData.skills.remove(skill);
+    if (_isUserMarkedComplete) _isUserMarkedComplete = false;
     _markDirty();
     notifyListeners();
     _scheduleAutoSave();
@@ -357,47 +386,127 @@ class CVFormProvider extends ChangeNotifier {
     }
   }
 
-  // ============ CV STATUS METHODS ============
-
+  /// ✅ AUTO-SAVE: Only saves CVData, NEVER creates/updates CVModel
   Future<void> _autoSave() async {
     if (!_isDirty) return;
 
     try {
       final id =
           _currentCVId ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+      // ✅ ONLY save CVData, NOT CVModel
       await _storage.saveCVData(_cvData, id);
       _currentCVId = id;
-      debugPrint('🔄 Auto-saved CVData only (not in list): $id');
+
+      debugPrint(
+        '🔄 Auto-saved CVData only (not in list | status unchanged): $id',
+      );
     } catch (e) {
       debugPrint('❌ Auto-save error: $e');
     }
   }
 
-  // ============ CV STATUS METHODS ============
-  // ✅ ADD THESE METHODS HERE
+  // ============ PROGRESS & STATUS METHODS ============
 
-  bool _isCVComplete() {
-    final data = _cvData;
+  /// ✅ Calculates real progress based on minimum required fields
+  double calculateProgress() {
+    final checks = <bool>[
+      _cvData.fullName.trim().isNotEmpty,
+      _cvData.email.trim().isNotEmpty,
+      _cvData.phone.trim().isNotEmpty,
+      _cvData.summary.trim().isNotEmpty,
+      _cvData.educations.isNotEmpty,
+      _cvData.skills.length >= 3, // ✅ Skills required (min 3)
+    ];
 
-    if (data.fullName.trim().isEmpty) return false;
-    if (data.email.trim().isEmpty) return false;
-    if (data.phone.trim().isEmpty) return false;
-    if (data.summary.trim().isEmpty) return false;
-
-    if (data.experiences.isEmpty) return false;
-    if (data.educations.isEmpty) return false;
-    if (data.skills.length < 3) return false;
-
-    return true;
+    final filled = checks.where((e) => e).length;
+    return filled / checks.length;
   }
 
-  String _getCVStatus() {
-    return _isCVComplete() ? 'completed' : 'draft';
+  /// ✅ Returns display status based on progress and user preference
+  String getDisplayStatus() {
+    final progress = calculateProgress();
+
+    // User explicitly marked as complete
+    if (_isUserMarkedComplete) return "✓ Completed";
+
+    // Auto-suggested status based on data
+    if (progress >= READY_THRESHOLD) return "🎯 Ready to Submit";
+    if (progress >= IN_PROGRESS_THRESHOLD) return "📝 In Progress";
+    return "✏️ Draft";
   }
 
-  // ============ MANUAL SAVE (Creates CVModel for list) ============
+  /// ✅ Returns color for status display
+  Color getStatusColor() {
+    if (_isUserMarkedComplete) return Colors.green;
 
-  Future<bool> saveDraft() async {
+    final progress = calculateProgress();
+    if (progress >= READY_THRESHOLD) return Colors.teal;
+    if (progress >= IN_PROGRESS_THRESHOLD) return Colors.orange;
+    return Colors.grey;
+  }
+
+  /// ✅ Checks if data meets minimum requirements
+  ValidationResult validateData() {
+    final errors = <String>[];
+    final warnings = <String>[];
+
+    // Required fields (cause errors)
+    if (_cvData.fullName.trim().isEmpty) {
+      errors.add('Full Name is required');
+    }
+
+    if (_cvData.email.trim().isEmpty) {
+      errors.add('Email is required');
+    } else if (!_isValidEmail(_cvData.email.trim())) {
+      errors.add('Please enter a valid email address');
+    }
+
+    if (_cvData.phone.trim().isEmpty) {
+      errors.add('Phone number is required');
+    }
+
+    if (_cvData.summary.trim().isEmpty) {
+      errors.add('Professional Summary is required');
+    } else if (_cvData.summary.trim().length < 50) {
+      warnings.add('Professional Summary is too short (min 50 characters)');
+    }
+
+    if (_cvData.educations.isEmpty) {
+      errors.add('Education is required — add your highest degree');
+    }
+
+    if (_cvData.skills.isEmpty) {
+      errors.add('Skills are required (minimum 3)');
+    } else if (_cvData.skills.length < 3) {
+      errors.add('Add ${3 - _cvData.skills.length} more skill(s)');
+    }
+
+    // Optional but recommended (only warnings)
+    if (_cvData.experiences.isEmpty) {
+      warnings.add('Add work experience to strengthen your CV');
+    }
+
+    if (_cvData.projects.isEmpty) {
+      warnings.add('Add projects to showcase your work');
+    }
+
+    return ValidationResult(
+      isValid: errors.isEmpty,
+      errors: errors,
+      warnings: warnings,
+    );
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return emailRegex.hasMatch(email);
+  }
+
+  // ============ MANUAL SAVE METHODS ============
+
+  /// ✅ Save as Draft - Always saves as DRAFT regardless of data
+  Future<bool> saveAsDraft() async {
     try {
       final id =
           _currentCVId ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -405,10 +514,12 @@ class CVFormProvider extends ChangeNotifier {
       final cvModel = CVModel(
         id: id,
         title: _cvData.fullName.isNotEmpty ? _cvData.fullName : 'Untitled CV',
-        status: _getCVStatus(), // ✅ Dynamic status (draft/completed)
+        status: 'draft',
         progress: calculateProgress(),
         lastEdited: DateTime.now(),
         data: _cvData.toJson(),
+        isUserCompleted: false, // ✅ User didn't mark as complete
+        completedAt: null,
       );
 
       await _storage.saveCV(cvModel);
@@ -416,8 +527,9 @@ class CVFormProvider extends ChangeNotifier {
 
       _currentCVId = id;
       _isDirty = false;
+      _isUserMarkedComplete = false;
 
-      debugPrint('✅ Draft saved: ${cvModel.title} (Status: ${cvModel.status})');
+      debugPrint('✅ Saved as DRAFT: ${cvModel.title}');
       return true;
     } catch (e) {
       debugPrint('❌ Error saving draft: $e');
@@ -425,8 +537,41 @@ class CVFormProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> forceSave() async {
-    if (!_isDirty) return;
+  /// ✅ Mark as Completed - User explicitly marks as complete
+  Future<bool> markAsCompleted() async {
+    try {
+      final id =
+          _currentCVId ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+      final cvModel = CVModel(
+        id: id,
+        title: _cvData.fullName.isNotEmpty ? _cvData.fullName : 'Untitled CV',
+        status: 'completed',
+        progress: calculateProgress(),
+        lastEdited: DateTime.now(),
+        data: _cvData.toJson(),
+        isUserCompleted: true, // ✅ User explicitly marked
+        completedAt: DateTime.now(),
+      );
+
+      await _storage.saveCV(cvModel);
+      await _storage.saveCVData(_cvData, id);
+
+      _currentCVId = id;
+      _isDirty = false;
+      _isUserMarkedComplete = true;
+
+      debugPrint('✅ Marked as COMPLETED: ${cvModel.title}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error marking as completed: $e');
+      return false;
+    }
+  }
+
+  /// ✅ Force save (used by preview/exit) - Saves as auto-detected status
+  Future<bool> forceSave() async {
+    if (!_isDirty) return true;
 
     try {
       final id =
@@ -435,10 +580,12 @@ class CVFormProvider extends ChangeNotifier {
       final cvModel = CVModel(
         id: id,
         title: _cvData.fullName.isNotEmpty ? _cvData.fullName : 'Untitled CV',
-        status: _getCVStatus(), // ✅ Dynamic status
+        status: _isUserMarkedComplete ? 'completed' : 'draft',
         progress: calculateProgress(),
         lastEdited: DateTime.now(),
         data: _cvData.toJson(),
+        isUserCompleted: _isUserMarkedComplete,
+        completedAt: _isUserMarkedComplete ? DateTime.now() : null,
       );
 
       await _storage.saveCV(cvModel);
@@ -446,10 +593,12 @@ class CVFormProvider extends ChangeNotifier {
 
       _currentCVId = id;
       _isDirty = false;
-      debugPrint('✅ Force saved: ${cvModel.title} (Status: ${cvModel.status})');
+
+      debugPrint('✅ Force saved: ${cvModel.title} (${cvModel.status})');
+      return true;
     } catch (e) {
-      debugPrint('❌ Error saving CV: $e');
-      rethrow;
+      debugPrint('❌ Error force saving: $e');
+      return false;
     }
   }
 
@@ -467,6 +616,7 @@ class CVFormProvider extends ChangeNotifier {
   Future<void> revertToLastSaved() async {
     if (_currentCVId == null) {
       _cvData = CVData.empty();
+      _isUserMarkedComplete = false;
       _isDirty = false;
       notifyListeners();
       debugPrint('🗑️ Discarded new CV (no saved version)');
@@ -477,11 +627,17 @@ class CVFormProvider extends ChangeNotifier {
       final savedData = await _storage.loadCVData(_currentCVId!);
       if (savedData != null) {
         _cvData = savedData;
+
+        // Also reload completion status
+        final cvModel = await _storage.getCV(_currentCVId!);
+        _isUserMarkedComplete = cvModel?.isUserCompleted ?? false;
+
         _isDirty = false;
         notifyListeners();
         debugPrint('🗑️ Discarded changes, reverted to last saved version');
       } else {
         _cvData = CVData.empty();
+        _isUserMarkedComplete = false;
         _isDirty = false;
         notifyListeners();
         debugPrint('🗑️ Discarded changes (no saved version found)');
@@ -489,6 +645,7 @@ class CVFormProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error reverting CV: $e');
       _cvData = CVData.empty();
+      _isUserMarkedComplete = false;
       _isDirty = false;
       notifyListeners();
     }
@@ -499,41 +656,11 @@ class CVFormProvider extends ChangeNotifier {
   void fillDummyData() {
     _cvData = CVData.sample();
     _currentCVId = null;
+    _isUserMarkedComplete = false;
     _isDirty = true;
     notifyListeners();
     _scheduleAutoSave();
-    debugPrint('✅ Dummy data filled');
-  }
-
-  // ============ PROGRESS CALCULATION ============
-
-  double calculateProgress() {
-    int filled = 0;
-    int total = 0;
-
-    if (_cvData.fullName.isNotEmpty) filled++;
-    if (_cvData.email.isNotEmpty) filled++;
-    if (_cvData.phone.isNotEmpty) filled++;
-    if (_cvData.summary.isNotEmpty) filled++;
-
-    filled += _cvData.experiences.length;
-    filled += _cvData.educations.length;
-    filled += _cvData.skills.length;
-    filled += _cvData.languages.length;
-    filled += _cvData.certifications.length;
-    filled += _cvData.projects.length;
-
-    total =
-        7 +
-        _cvData.experiences.length +
-        _cvData.educations.length +
-        _cvData.skills.length +
-        _cvData.languages.length +
-        _cvData.certifications.length +
-        _cvData.projects.length +
-        1;
-
-    return total > 0 ? filled / total : 0.0;
+    debugPrint('✅ Dummy data filled (Draft mode)');
   }
 
   // ============ DISPOSE ============
@@ -543,4 +670,17 @@ class CVFormProvider extends ChangeNotifier {
     _autoSaveTimer?.cancel();
     super.dispose();
   }
+}
+
+// Helper class for validation results
+class ValidationResult {
+  final bool isValid;
+  final List<String> errors;
+  final List<String> warnings;
+
+  ValidationResult({
+    required this.isValid,
+    required this.errors,
+    required this.warnings,
+  });
 }

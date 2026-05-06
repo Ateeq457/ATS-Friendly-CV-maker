@@ -30,6 +30,16 @@ class _OptimizedProjectsFormState extends State<OptimizedProjectsForm> {
     super.initState();
     _localProjects = List.from(widget.projects);
   }
+  // File: lib/presentation/widgets/form/optimized_projects_form.dart
+
+  @override
+  void didUpdateWidget(OptimizedProjectsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projects != widget.projects) {
+      _localProjects = List.from(widget.projects);
+      setState(() {});
+    }
+  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();

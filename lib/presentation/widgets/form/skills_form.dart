@@ -29,6 +29,16 @@ class _OptimizedSkillsFormState extends State<OptimizedSkillsForm> {
     super.initState();
     _localSkills = List.from(widget.skills);
   }
+  // File: lib/presentation/widgets/form/optimized_skills_form.dart
+
+  @override
+  void didUpdateWidget(OptimizedSkillsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.skills != widget.skills) {
+      _localSkills = List.from(widget.skills);
+      setState(() {});
+    }
+  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();

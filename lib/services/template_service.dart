@@ -24,15 +24,17 @@ class TemplateService {
     html = _replaceExperiences(html, cvData.experiences);
     html = _replaceEducations(html, cvData.educations);
     html = _replaceSkills(html, cvData.skills);
+
+    // ✅ Section-aware replacements
     html = _replaceLanguages(html, cvData.languages);
     html = _replaceCertifications(html, cvData.certifications);
     html = _replaceProjects(html, cvData.projects);
+
     html = _addDefaultZoom(html);
 
     return html;
   }
 
-  // ✅ Add default zoom
   static String _addDefaultZoom(String html) {
     if (html.contains('<body style=')) {
       return html.replaceFirst('<body style=', '<body style="zoom: 40%; "');
@@ -40,18 +42,16 @@ class TemplateService {
     return html.replaceFirst('<body', '<body style="zoom: 40%;"');
   }
 
-  // ✅ Replace simple placeholders
   static String _replaceSimplePlaceholders(String html, CVData cvData) {
     return html
-        .replaceAll('{{fullName}}', cvData.fullName)
-        .replaceAll('{{title}}', cvData.title)
-        .replaceAll('{{email}}', cvData.email)
-        .replaceAll('{{phone}}', cvData.phone)
-        .replaceAll('{{location}}', cvData.location)
-        .replaceAll('{{summary}}', cvData.summary);
+        .replaceAll('{{fullName}}', _escapeHtml(cvData.fullName))
+        .replaceAll('{{title}}', _escapeHtml(cvData.title))
+        .replaceAll('{{email}}', _escapeHtml(cvData.email))
+        .replaceAll('{{phone}}', _escapeHtml(cvData.phone))
+        .replaceAll('{{location}}', _escapeHtml(cvData.location))
+        .replaceAll('{{summary}}', _escapeHtml(cvData.summary));
   }
 
-  // ✅ Replace experiences loop
   static String _replaceExperiences(String html, List<Experience> experiences) {
     if (experiences.isEmpty) {
       return html.replaceAll(
@@ -79,14 +79,12 @@ class TemplateService {
       </div>
       ''';
     }
-
     return html.replaceAll(
       RegExp(r'{{#each experiences}}[\s\S]*?{{\/each}}'),
       buffer,
     );
   }
 
-  // ✅ Replace educations loop
   static String _replaceEducations(String html, List<Education> educations) {
     if (educations.isEmpty) {
       return html.replaceAll(
@@ -115,14 +113,12 @@ class TemplateService {
       </div>
       ''';
     }
-
     return html.replaceAll(
       RegExp(r'{{#each educations}}[\s\S]*?{{\/each}}'),
       buffer,
     );
   }
 
-  // ✅ Replace skills loop
   static String _replaceSkills(String html, List<String> skills) {
     if (skills.isEmpty) {
       return html.replaceAll(RegExp(r'{{#each skills}}[\s\S]*?{{\/each}}'), '');
@@ -132,18 +128,18 @@ class TemplateService {
     for (var skill in skills) {
       buffer += '<span class="skill-tag">${_escapeHtml(skill)}</span>\n';
     }
-
     return html.replaceAll(
       RegExp(r'{{#each skills}}[\s\S]*?{{\/each}}'),
       buffer,
     );
   }
 
-  // ✅ Replace languages loop
+  // ✅ UPDATED: Remove entire languages section if empty
   static String _replaceLanguages(String html, List<Language> languages) {
     if (languages.isEmpty) {
+      // Remove the entire section block
       return html.replaceAll(
-        RegExp(r'{{#each languages}}[\s\S]*?{{\/each}}'),
+        RegExp(r'{{#section languages}}[\s\S]*?{{\/section languages}}'),
         '',
       );
     }
@@ -154,20 +150,23 @@ class TemplateService {
           '<span class="language-item">${_escapeHtml(lang.name)} - ${_escapeHtml(lang.proficiencyLevel)}</span>\n';
     }
 
-    return html.replaceAll(
-      RegExp(r'{{#each languages}}[\s\S]*?{{\/each}}'),
-      buffer,
-    );
+    // Remove section tags and replace content
+    return html
+        .replaceAll('{{#section languages}}', '')
+        .replaceAll('{{/section languages}}', '')
+        .replaceAll(RegExp(r'{{#each languages}}[\s\S]*?{{\/each}}'), buffer);
   }
 
-  // ✅ Replace certifications loop
+  // ✅ UPDATED: Remove entire certifications section if empty
   static String _replaceCertifications(
     String html,
     List<Certification> certifications,
   ) {
     if (certifications.isEmpty) {
       return html.replaceAll(
-        RegExp(r'{{#each certifications}}[\s\S]*?{{\/each}}'),
+        RegExp(
+          r'{{#section certifications}}[\s\S]*?{{\/section certifications}}',
+        ),
         '',
       );
     }
@@ -183,17 +182,20 @@ class TemplateService {
       ''';
     }
 
-    return html.replaceAll(
-      RegExp(r'{{#each certifications}}[\s\S]*?{{\/each}}'),
-      buffer,
-    );
+    return html
+        .replaceAll('{{#section certifications}}', '')
+        .replaceAll('{{/section certifications}}', '')
+        .replaceAll(
+          RegExp(r'{{#each certifications}}[\s\S]*?{{\/each}}'),
+          buffer,
+        );
   }
 
-  // ✅ Replace projects loop
+  // ✅ UPDATED: Remove entire projects section if empty
   static String _replaceProjects(String html, List<Project> projects) {
     if (projects.isEmpty) {
       return html.replaceAll(
-        RegExp(r'{{#each projects}}[\s\S]*?{{\/each}}'),
+        RegExp(r'{{#section projects}}[\s\S]*?{{\/section projects}}'),
         '',
       );
     }
@@ -209,13 +211,12 @@ class TemplateService {
       ''';
     }
 
-    return html.replaceAll(
-      RegExp(r'{{#each projects}}[\s\S]*?{{\/each}}'),
-      buffer,
-    );
+    return html
+        .replaceAll('{{#section projects}}', '')
+        .replaceAll('{{/section projects}}', '')
+        .replaceAll(RegExp(r'{{#each projects}}[\s\S]*?{{\/each}}'), buffer);
   }
 
-  // ✅ Helper: Escape HTML special characters
   static String _escapeHtml(String text) {
     return text
         .replaceAll('&', '&amp;')
@@ -225,7 +226,6 @@ class TemplateService {
         .replaceAll("'", '&#39;');
   }
 
-  // ✅ Helper: Format date to "Jan 2024"
   static String _formatDate(DateTime? date) {
     if (date == null) return '';
     const months = [

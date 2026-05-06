@@ -1,7 +1,6 @@
 // File: lib/presentation/widgets/form/optimized_certifications_form.dart
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../../../core/constants/design_system.dart';
 import 'date_picker_field.dart';
@@ -32,6 +31,16 @@ class _OptimizedCertificationsFormState
   void initState() {
     super.initState();
     _localCertifications = List.from(widget.certifications);
+  }
+
+  // ✅ ADD THIS METHOD - React to parent data changes
+  @override
+  void didUpdateWidget(OptimizedCertificationsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.certifications != widget.certifications) {
+      _localCertifications = List.from(widget.certifications);
+      setState(() {});
+    }
   }
 
   void _scheduleSave() {
